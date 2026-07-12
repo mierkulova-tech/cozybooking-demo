@@ -212,7 +212,6 @@ class CozyBookingFlowTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_cannot_resurrect_canceled_reservation(self):
-        """#1 стейт-машина: отменённую бронь нельзя вернуть в CONFIRMED."""
         self._register("l6@test.de", "LESSOR")
         self._register("r6@test.de", "RENTER")
         lessor_token = self._login("l6@test.de")

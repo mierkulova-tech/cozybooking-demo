@@ -1,3 +1,4 @@
+
 from django.contrib import admin
 
 from apps.listings.models import Address, Apartment, SearchHistory, ViewHistory
@@ -14,13 +15,16 @@ class ApartmentAdmin(admin.ModelAdmin):
         "is_active",
         "owner",
     ]
+
     list_filter = ["housing_type", "is_active"]
+
     search_fields = ["title", "description"]
 
 
 @admin.register(Address)
 class AddressAdmin(admin.ModelAdmin):
     list_display = ["id", "city", "land", "postal_code"]
+
     search_fields = ["city", "land"]
 
 
@@ -32,4 +36,5 @@ class ViewHistoryAdmin(admin.ModelAdmin):
 @admin.register(SearchHistory)
 class SearchHistoryAdmin(admin.ModelAdmin):
     list_display = ["id", "keyword", "user", "created_at"]
+
     search_fields = ["keyword"]

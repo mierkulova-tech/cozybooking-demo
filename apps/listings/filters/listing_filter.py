@@ -1,3 +1,4 @@
+
 from django.db.models import Count, Q, QuerySet
 
 from apps.listings.constants.filter_constants import (
@@ -14,13 +15,17 @@ from apps.listings.constants.filter_constants import (
 
 
 class ListingFilter:
+
     def apply(self, queryset: QuerySet, params: dict) -> QuerySet:
+
         queryset = self._filter(queryset, params)
+
         queryset = self._sort(queryset, params.get(ORDER))
+
         return queryset
 
-    # --- Поиск и фильтрация -------------------------------------------------
     def _filter(self, queryset: QuerySet, params: dict) -> QuerySet:
+
         search = params.get(SEARCH)
         if search:
             queryset = queryset.filter(
@@ -57,11 +62,14 @@ class ListingFilter:
         return queryset
 
     def _sort(self, queryset: QuerySet, order: str | None) -> QuerySet:
+
         if not order:
             return queryset
 
         if order.lstrip("-") == POPULAR:
+
             direction = "-views_count" if order.startswith("-") else "views_count"
+
             return queryset.annotate(
                 views_count=Count("views__user", distinct=True)
             ).order_by(direction)

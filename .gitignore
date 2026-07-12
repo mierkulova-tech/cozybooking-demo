@@ -36,3 +36,5 @@ db.sqlite3-journal
 
 # Docker
 docker-data/
+
+.ruff_cache/
