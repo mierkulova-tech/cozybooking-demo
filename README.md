@@ -1,5 +1,5 @@
 # CozyBooking — backend системы аренды жилья
-![Python](https://img.shields.io/badge/python-3.14-blue.svg)
+![Python](https://img.shields.io/badge/python-3.12-blue.svg)
 ![Django](https://img.shields.io/badge/django-5.1-green.svg)
 
 Полнофункциональное back-end-приложение (REST API) для аренды жилья: объявления,
