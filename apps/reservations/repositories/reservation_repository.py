@@ -24,7 +24,6 @@ class ReservationRepository:
         )
 
     def get_overlapping(self, listing, start_date, end_date) -> QuerySet:
-
         return Reservation.objects.filter(
             Q(listing=listing)
             & Q(start_date__lt=end_date)
@@ -33,15 +32,15 @@ class ReservationRepository:
         )
 
     def lock_listing(self, listing_id: int) -> Apartment:
-
         return Apartment.objects.select_for_update().get(id=listing_id)
 
-    def create(self, user, listing, start_date, end_date) -> Reservation:
+    def create(self, user, listing, start_date, end_date, price) -> Reservation:
         return Reservation.objects.create(
             user=user,
             listing=listing,
             start_date=start_date,
             end_date=end_date,
+            price=price,
             status=StatusChoices.PENDING,
         )
 

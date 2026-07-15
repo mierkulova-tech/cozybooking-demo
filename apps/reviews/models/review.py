@@ -39,6 +39,17 @@ class Review(BaseModel):
         ]
 
     def clean(self):
+        if not self.reservation_id:
+            raise ValidationError(
+                {"reservation": "Отзыв должен быть привязан к бронированию."}
+            )
+
+        if self.rating is not None:
+            if self.rating < 1 or self.rating > 5:
+                raise ValidationError(
+                    {"rating": "Оценка должна быть в диапазоне от 1 до 5."}
+                )
+
         if self.reservation_id:
             if self.user_id and self.reservation.user_id != self.user_id:
                 raise ValidationError(
@@ -52,7 +63,6 @@ class Review(BaseModel):
             raise ValidationError(
                 {"listing": "Жильё в отзыве должно совпадать с жильём из бронирования."}
             )
-
 
     def save(self, *args, **kwargs):
         self.full_clean()

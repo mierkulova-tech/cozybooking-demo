@@ -1,23 +1,14 @@
-
 from rest_framework import serializers, status
-
 from rest_framework.permissions import AllowAny, IsAuthenticated
-
 from rest_framework.response import Response
-
 from rest_framework.views import APIView
-
 from rest_framework_simplejwt.exceptions import TokenError
-
 from rest_framework_simplejwt.tokens import RefreshToken
-
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from apps.users.dto.user_serializers import RegisterSerializer, UserResponseSerializer
-
-from apps.users.services.user_service import UserService
-
 from apps.users.dto.token_serializers import CustomTokenObtainPairSerializer
+from apps.users.dto.user_serializers import RegisterSerializer, UserResponseSerializer
+from apps.users.services.user_service import UserService
 
 
 class _RefreshInputSerializer(serializers.Serializer):
@@ -25,13 +16,11 @@ class _RefreshInputSerializer(serializers.Serializer):
 
 
 class RegisterController(APIView):
-
     permission_classes = [AllowAny]
 
     throttle_scope = "auth"
 
-    def post(self, request):
-
+    def post(self, request, *args, **kwargs):
         serializer = RegisterSerializer(data=request.data)
 
         serializer.is_valid(raise_exception=True)
@@ -51,7 +40,6 @@ class RegisterController(APIView):
 
 
 class LoginController(TokenObtainPairView):
-
     permission_classes = [AllowAny]
 
     serializer_class = CustomTokenObtainPairSerializer
@@ -60,13 +48,11 @@ class LoginController(TokenObtainPairView):
 
 
 class LogoutController(APIView):
-
     permission_classes = [IsAuthenticated]
 
     throttle_scope = "auth"
 
-    def post(self, request):
-
+    def post(self, request, *args, **kwargs):
         refresh = request.data.get("refresh")
 
         if not refresh:
@@ -97,5 +83,15 @@ class LogoutController(APIView):
 
 
 class RefreshController(TokenRefreshView):
-
     throttle_scope = "auth"
+
+
+class DeleteAccountController(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
+        service = UserService()
+
+        service.delete_account(request.user)
+
+        return Response(status=status.HTTP_204_NO_CONTENT)

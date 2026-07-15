@@ -1,4 +1,3 @@
-
 from django.contrib import admin
 
 from apps.listings.models import Address, Apartment, SearchHistory, ViewHistory

@@ -1,0 +1,33 @@
+
+import django.db.models.deletion
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+    dependencies = [
+        ("listings", "0003_alter_address_postal_code_alter_apartment_price_and_more"),
+        ("reservations", "0005_reservation_reservation_listing_fb7304_idx"),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.AlterField(
+            model_name="reservation",
+            name="listing",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="reservations",
+                to="listings.apartment",
+            ),
+        ),
+        migrations.AlterField(
+            model_name="reservation",
+            name="user",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="reservations",
+                to=settings.AUTH_USER_MODEL,
+            ),
+        ),
+    ]

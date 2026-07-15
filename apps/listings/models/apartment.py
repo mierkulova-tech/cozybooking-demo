@@ -1,26 +1,16 @@
-
+from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator, MaxValueValidator
-
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-
-from django.db.models import Q, CharField, TextField
-
-from django.db.models.functions import Length
+from django.db.models import Q
 
 from apps.common.models.base import BaseModel
-
 from apps.listings.choices.housing_choices import HousingTypeChoices
 
 
-CharField.register_lookup(Length)
-TextField.register_lookup(Length)
-
-
 class Apartment(BaseModel):
-
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -40,7 +30,9 @@ class Apartment(BaseModel):
     price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        validators=[MinValueValidator(0.01, message="Цена должна быть больше нуля.")],
+        validators=[
+            MinValueValidator(Decimal("0.01"), message="Цена должна быть больше нуля.")
+        ],
     )
 
     rooms = models.PositiveSmallIntegerField(
@@ -53,7 +45,7 @@ class Apartment(BaseModel):
     )
 
     housing_type = models.CharField(max_length=20, choices=HousingTypeChoices.choices)
-
+    views_count = models.PositiveIntegerField(default=0, editable=False)
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -66,6 +58,7 @@ class Apartment(BaseModel):
             models.Index(fields=["rooms"]),
             models.Index(fields=["housing_type"]),
             models.Index(fields=["is_active"]),
+            models.Index(fields=["views_count"]),
         ]
         constraints = [
             models.CheckConstraint(
@@ -81,7 +74,7 @@ class Apartment(BaseModel):
                 name="apartment_title_min_length",
             ),
             models.CheckConstraint(
-                condition=Q(description__length__gte=20),
+                condition=Q(description__length__gte=5),
                 name="apartment_description_min_length",
             ),
             models.CheckConstraint(
@@ -94,12 +87,15 @@ class Apartment(BaseModel):
         if self.title:
             self.title = self.title.strip()
 
+        if self.description:
+            self.description = self.description.strip()
+
         if len(self.title) < 5:
             raise ValidationError(
                 {"title": "Название должно содержать минимум 5 символов."}
             )
 
-        if len(self.description.strip()) < 20:
+        if len(self.description.strip()) < 5:
             raise ValidationError({"description": "Описание слишком короткое."})
 
     def save(self, *args, **kwargs):

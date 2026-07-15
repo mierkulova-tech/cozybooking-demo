@@ -11,8 +11,6 @@ from apps.reservations.errors.reservations_errors import (
     DateInPastError,
     DateOccupiedError,
     InvalidStatusTransitionError,
-    LessorStatusError,
-    RenterCancelOnlyError,
     ReservationPermissionDeniedError,
     StartDateGreaterEndDateError,
 )
@@ -59,12 +57,21 @@ class ReservationService:
         if listing.owner_id == user.id:
             raise CannotBookOwnListingError()
 
-        self.repository.lock_listing(listing.id)
+        listing = self.repository.lock_listing(listing.id)
 
         if self.repository.get_overlapping(listing, start_date, end_date).exists():
             raise DateOccupiedError()
 
-        return self.repository.create(user, listing, start_date, end_date)
+        nights = (end_date - start_date).days
+        total_price = listing.price * nights
+
+        return self.repository.create(
+            user=user,
+            listing=listing,
+            start_date=start_date,
+            end_date=end_date,
+            price=total_price,
+        )
 
     def _validate_dates(self, start_date, end_date):
         today = timezone.now().date()
@@ -74,36 +81,64 @@ class ReservationService:
             raise StartDateGreaterEndDateError()
 
     @transaction.atomic
-    def update_status(self, user, reservation_id: int, new_status: str) -> Reservation:
+    def confirm_reservation(self, user, reservation_id: int) -> Reservation:
+        reservation = self.repository.get_by_id(reservation_id)
+        check_content_helper(reservation)
+
+        if reservation.listing.owner_id != user.id:
+            raise ReservationPermissionDeniedError()
+
+        if reservation.status != StatusChoices.PENDING:
+            raise InvalidStatusTransitionError()
+
+        reservation.status = StatusChoices.CONFIRMED
+        return self.repository.save(reservation)
+
+    @transaction.atomic
+    def check_in_reservation(self, user, reservation_id: int) -> Reservation:
+        reservation = self.repository.get_by_id(reservation_id)
+        check_content_helper(reservation)
+
+        if reservation.listing.owner_id != user.id:
+            raise ReservationPermissionDeniedError()
+
+        if reservation.status != StatusChoices.CONFIRMED:
+            raise InvalidStatusTransitionError()
+
+        today = timezone.now().date()
+        if not (reservation.start_date <= today <= reservation.end_date):
+            raise InvalidStatusTransitionError(
+                detail="Check-in возможен только в дни пребывания."
+            )
+
+        reservation.status = StatusChoices.CHECKED_IN
+        return self.repository.save(reservation)
+
+    @transaction.atomic
+    def cancel_reservation(self, user, reservation_id: int) -> Reservation:
         reservation = self.repository.get_by_id(reservation_id)
         check_content_helper(reservation)
 
         is_renter = reservation.user_id == user.id
         is_lessor = reservation.listing.owner_id == user.id
+
         if not (is_renter or is_lessor):
             raise ReservationPermissionDeniedError()
 
-        if new_status not in ALLOWED_TRANSITIONS.get(reservation.status, set()):
-            raise InvalidStatusTransitionError()
+        if reservation.status == StatusChoices.CHECKED_IN:
+            raise CantBeCanceledError(
+                "Нельзя отменить бронирование, которое уже началось (CHECKED_IN)."
+            )
 
         if is_renter and not is_lessor:
-            self._apply_renter_transition(reservation, new_status)
-        else:
-            self._apply_lessor_transition(reservation, new_status)
+            deadline = reservation.start_date - timedelta(days=CANCEL_DEADLINE_DAYS)
+            if timezone.now().date() > deadline:
+                raise CantBeCanceledError(
+                    f"Отмена возможна не позднее чем за {CANCEL_DEADLINE_DAYS} дней до заезда."
+                )
 
-        reservation.status = new_status
+        reservation.status = StatusChoices.CANCELED
         return self.repository.save(reservation)
-
-    def _apply_renter_transition(self, reservation: Reservation, new_status: str):
-        if new_status != StatusChoices.CANCELED:
-            raise RenterCancelOnlyError()
-        deadline = reservation.start_date - timedelta(days=CANCEL_DEADLINE_DAYS)
-        if timezone.now().date() > deadline:
-            raise CantBeCanceledError()
-
-    def _apply_lessor_transition(self, reservation: Reservation, new_status: str):
-        if new_status not in LESSOR_ALLOWED_STATUSES:
-            raise LessorStatusError()
 
     def get_my_reservations(self, user) -> list:
         return list(self.repository.list_by_renter(user.id))

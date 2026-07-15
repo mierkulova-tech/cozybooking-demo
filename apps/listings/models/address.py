@@ -1,14 +1,12 @@
+from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
-
-from django.core.exceptions import ValidationError
 from django.db.models import Q
 
 from apps.common.models.base import BaseModel
 
 
 class Address(BaseModel):
-
     land = models.CharField(max_length=100, help_text="Федеральная земля (Bundesland)")
 
     city = models.CharField(max_length=100)

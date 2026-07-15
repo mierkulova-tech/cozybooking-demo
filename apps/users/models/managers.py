@@ -1,4 +1,3 @@
-
 from django.contrib.auth.base_user import BaseUserManager
 from django.db import transaction
 
@@ -8,7 +7,6 @@ class UserManager(BaseUserManager):
 
     @transaction.atomic
     def _create_user(self, email, name, password, **extra_fields):
-
         if not email:
             raise ValueError("Email обязателен.")
 

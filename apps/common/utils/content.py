@@ -1,4 +1,3 @@
-
 from apps.common.exceptions.base import NoContentError
 
 

@@ -39,6 +39,7 @@ LOCAL_APPS = [
     "apps.listings",
     "apps.reservations",
     "apps.reviews",
+    "apps.tests",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -125,6 +126,10 @@ REST_FRAMEWORK = {
         "user": "1000/min",
         "auth": "5/min",
     },
+    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.URLPathVersioning",
+    "DEFAULT_VERSION": "v1",
+    "ALLOWED_VERSIONS": ["v1"],
+    "VERSION_PARAM": "version",
 }
 
 SIMPLE_JWT = {
@@ -154,3 +159,5 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
+    SECURE_BROWSER_XSS_FILTER = True
