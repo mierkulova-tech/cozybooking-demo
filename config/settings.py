@@ -74,18 +74,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-if env.bool("MYSQL", default=False):
+if env.bool("postgresql", default=False):
     DATABASES = {
         "default": {
-            "ENGINE": "django.db.backends.mysql",
+            "ENGINE": "django.db.backends.postgresql",
             "NAME": env.str("DB_NAME"),
             "USER": env.str("DB_USER"),
             "PASSWORD": env.str("DB_PASSWORD"),
             "HOST": env.str("DB_HOST"),
             "PORT": env.int("DB_PORT"),
-            "OPTIONS": {
-                "charset": "utf8mb4",
-            },
             "TEST": {
                 "NAME": f"test_{env.str('DB_NAME')}",
             },
