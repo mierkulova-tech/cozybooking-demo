@@ -9,6 +9,7 @@ env = Env()
 Env.read_env(BASE_DIR / ".env")
 
 DEBUG = env.bool("DEBUG", False)
+TESTING = env.bool("TESTING", False)
 
 if DEBUG:
     SECRET_KEY = env.str("SECRET_KEY", "unsafe-dev-key-do-not-use-in-production")
@@ -148,7 +149,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-if not DEBUG:
+if not DEBUG and not TESTING:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = True
     SECURE_HSTS_SECONDS = 31536000

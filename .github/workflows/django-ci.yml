@@ -31,6 +31,7 @@
           - name: Run Pytest
             env:
               PYTHONPATH: .
-              DEBUG: "True"
-              SECRET_KEY: 'django-insecure-ci-test-key-just-for-running-pytest-in-github'
+              DEBUG: "False"
+              TESTING: "True"
+              SECRET_KEY: '"django-insecure-ci-test-key-just-for-running-pytest-in-github"'
             run: pytest
