@@ -9,6 +9,7 @@ env = Env()
 Env.read_env(BASE_DIR / ".env")
 
 DEBUG = env.bool("DEBUG", False)
+TESTING = env.bool("TESTING", False)
 
 if DEBUG:
     SECRET_KEY = env.str("SECRET_KEY", "unsafe-dev-key-do-not-use-in-production")
@@ -25,6 +26,7 @@ DJANGO_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_extensions",
 ]
 
 THIRD_PARTY_APPS = [
@@ -74,18 +76,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-if env.bool("MYSQL", default=False):
+if env.bool("postgresql", default=False):
     DATABASES = {
         "default": {
-            "ENGINE": "django.db.backends.mysql",
+            "ENGINE": "django.db.backends.postgresql",
             "NAME": env.str("DB_NAME"),
             "USER": env.str("DB_USER"),
             "PASSWORD": env.str("DB_PASSWORD"),
             "HOST": env.str("DB_HOST"),
             "PORT": env.int("DB_PORT"),
-            "OPTIONS": {
-                "charset": "utf8mb4",
-            },
             "TEST": {
                 "NAME": f"test_{env.str('DB_NAME')}",
             },
@@ -150,7 +149,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-if not DEBUG:
+if not DEBUG and not TESTING:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = True
     SECURE_HSTS_SECONDS = 31536000

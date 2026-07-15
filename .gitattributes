@@ -1,0 +1,13 @@
+
+*.py filter=stripcomments
+
+
+strip_comments.py -filter
+
+
+
+* text=auto eol=lf
+
+
+*.sh text eol=lf
+entrypoint.sh text eol=lf
