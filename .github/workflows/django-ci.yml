@@ -32,4 +32,5 @@
           - name: Run Pytest
             env:
               PYTHONPATH: .
+              SECRET_KEY: 'django-insecure-ci-test-key-just-for-running-pytest-in-github'
             run: pytest
