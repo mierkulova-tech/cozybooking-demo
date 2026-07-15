@@ -39,9 +39,7 @@ docker-data/
 
 .ruff_cache/
 
-.gitattributes
-strip_comments.py
-setup_filter.ps1
+
 
 staticfiles/
 mysql_data/
