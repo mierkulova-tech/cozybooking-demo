@@ -18,12 +18,11 @@
           - name: Set up Python
             uses: actions/setup-python@v5
             with:
-              python-version: '3.12'
+              python-version: '3.14'
 
           - name: Install Dependencies
             run: |
               python -m pip install --upgrade pip
-              pip install ruff pytest pytest-django Faker
               if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
           - name: Run Ruff Linter
@@ -32,5 +31,6 @@
           - name: Run Pytest
             env:
               PYTHONPATH: .
+              DEBUG: "True"
               SECRET_KEY: 'django-insecure-ci-test-key-just-for-running-pytest-in-github'
             run: pytest
