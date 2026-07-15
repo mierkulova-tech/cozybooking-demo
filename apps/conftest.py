@@ -1,9 +1,12 @@
+import os
 from datetime import timedelta
 
 import pytest
 from django.utils import timezone
 
 from apps.reservations.choices.status_choices import StatusChoices
+
+os.environ["SECURE_SSL_REDIRECT"] = "False"
 
 
 @pytest.fixture
