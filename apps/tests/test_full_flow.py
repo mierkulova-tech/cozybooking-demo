@@ -1,56 +1,55 @@
 from datetime import timedelta
 
+import pytest
 from django.core.cache import cache
-from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.test import APITestCase
 
 from apps.reservations.choices.status_choices import StatusChoices
+from apps.reservations.models import Reservation
 
 
-class CozyBookingFlowTests(APITestCase):
-    def setUp(self):
+@pytest.mark.django_db
+class TestCozyBookingFullFlow:
+    @pytest.fixture(autouse=True)
+    def setup(self, api_client):
+        self.client = api_client
         self.today = timezone.now().date()
-
         cache.clear()
 
-    def _register(self, email, role, name="Тест"):
+    def _register(self, email: str, role: str, name: str = "Тест"):
         return self.client.post(
-            reverse("users:register"),
+            "/api/v1/users/register/",
             {
                 "name": name,
                 "email": email,
-                "password": "StrongPass123",
+                "password": "StrongPass123!",
                 "role": role,
             },
             format="json",
         )
 
-    def _login(self, email):
+    def _login(self, email: str):
         resp = self.client.post(
-            reverse("users:login"),
-            {
-                "email": email,
-                "password": "StrongPass123",
-            },
+            "/api/v1/users/login/",
+            {"email": email, "password": "StrongPass123!"},
             format="json",
         )
-        return resp.data["access"]
+        return resp.data.get("access")
 
-    def _auth(self, token):
+    def _auth(self, token: str):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
-    def _logout_client(self):
+    def _logout(self):
         self.client.credentials()
 
-    def _create_listing(self, token):
+    def _create_listing(self, token: str):
         self._auth(token)
         resp = self.client.post(
-            reverse("listings:list"),
+            "/api/v1/listings/",
             {
                 "title": "Уютная студия в центре",
-                "description": "Светлая студия рядом с метро",
+                "description": "Светлая студия рядом с метро, все красиво и уютно, всем нравиться",
                 "price": "850.00",
                 "rooms": 1,
                 "housing_type": "STUDIO",
@@ -66,32 +65,32 @@ class CozyBookingFlowTests(APITestCase):
         return resp
 
     def test_full_happy_path(self):
-        self.assertEqual(
-            self._register("lessor@test.de", "LESSOR").status_code,
-            status.HTTP_201_CREATED,
+        assert (
+            self._register("lessor@test.de", "LESSOR").status_code
+            == status.HTTP_201_CREATED
         )
-        self.assertEqual(
-            self._register("renter@test.de", "RENTER").status_code,
-            status.HTTP_201_CREATED,
+        assert (
+            self._register("renter@test.de", "RENTER").status_code
+            == status.HTTP_201_CREATED
         )
 
         lessor_token = self._login("lessor@test.de")
         renter_token = self._login("renter@test.de")
 
         listing_resp = self._create_listing(lessor_token)
-        self.assertEqual(listing_resp.status_code, status.HTTP_201_CREATED)
+        assert listing_resp.status_code == status.HTTP_201_CREATED
         listing_id = listing_resp.data["id"]
 
-        self._logout_client()
-        catalog = self.client.get(reverse("listings:list"))
-        self.assertEqual(catalog.status_code, status.HTTP_200_OK)
-        self.assertGreaterEqual(catalog.data["total"], 1)
+        self._logout()
+        catalog = self.client.get("/api/v1/listings/")
+        assert catalog.status_code == status.HTTP_200_OK
+        assert catalog.data.get("total", 0) >= 1
 
         self._auth(renter_token)
         start = self.today + timedelta(days=10)
         end = self.today + timedelta(days=15)
         booking = self.client.post(
-            reverse("reservations:create"),
+            "/api/v1/reservations/",
             {
                 "listing": listing_id,
                 "start_date": start.isoformat(),
@@ -99,28 +98,31 @@ class CozyBookingFlowTests(APITestCase):
             },
             format="json",
         )
-        self.assertEqual(booking.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(booking.data["status"], StatusChoices.PENDING)
+        assert booking.status_code == status.HTTP_201_CREATED
+        assert booking.data["status"] == StatusChoices.PENDING
         reservation_id = booking.data["id"]
 
         self._auth(lessor_token)
         confirm = self.client.patch(
-            reverse("reservations:status", args=[reservation_id]),
-            {"status": StatusChoices.CONFIRMED},
+            f"/api/v1/reservations/{reservation_id}/confirm/",
             format="json",
         )
-        self.assertEqual(confirm.status_code, status.HTTP_200_OK)
+        assert confirm.status_code == status.HTTP_200_OK
+
+        Reservation.objects.filter(pk=reservation_id).update(
+            start_date=self.today,
+            end_date=self.today + timedelta(days=5),
+        )
 
         checkin = self.client.patch(
-            reverse("reservations:status", args=[reservation_id]),
-            {"status": StatusChoices.CHECKED_IN},
+            f"/api/v1/reservations/{reservation_id}/check-in/",
             format="json",
         )
-        self.assertEqual(checkin.status_code, status.HTTP_200_OK)
+        assert checkin.status_code == status.HTTP_200_OK
 
         self._auth(renter_token)
         review = self.client.post(
-            reverse("reviews:create"),
+            "/api/v1/reviews/",
             {
                 "reservation": reservation_id,
                 "rating": 5,
@@ -128,18 +130,18 @@ class CozyBookingFlowTests(APITestCase):
             },
             format="json",
         )
-        self.assertEqual(review.status_code, status.HTTP_201_CREATED)
+        assert review.status_code == status.HTTP_201_CREATED
 
-        self._logout_client()
-        reviews = self.client.get(reverse("reviews:by-listing", args=[listing_id]))
-        self.assertEqual(reviews.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(reviews.data), 1)
+        self._logout()
+        reviews = self.client.get(f"/api/v1/reviews/listing/{listing_id}/")
+        assert reviews.status_code == status.HTTP_200_OK
+        assert len(reviews.data) == 1
 
     def test_renter_cannot_create_listing(self):
         self._register("r2@test.de", "RENTER")
         self._auth(self._login("r2@test.de"))
-        resp = self.client.post(reverse("listings:list"), {}, format="json")
-        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        resp = self.client.post("/api/v1/listings/", {}, format="json")
+        assert resp.status_code == status.HTTP_403_FORBIDDEN
 
     def test_overlapping_booking_rejected(self):
         self._register("l3@test.de", "LESSOR")
@@ -152,14 +154,14 @@ class CozyBookingFlowTests(APITestCase):
         start = (self.today + timedelta(days=20)).isoformat()
         end = (self.today + timedelta(days=25)).isoformat()
         first = self.client.post(
-            reverse("reservations:create"),
+            "/api/v1/reservations/",
             {"listing": listing_id, "start_date": start, "end_date": end},
             format="json",
         )
-        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        assert first.status_code == status.HTTP_201_CREATED
 
         second = self.client.post(
-            reverse("reservations:create"),
+            "/api/v1/reservations/",
             {
                 "listing": listing_id,
                 "start_date": (self.today + timedelta(days=22)).isoformat(),
@@ -167,15 +169,16 @@ class CozyBookingFlowTests(APITestCase):
             },
             format="json",
         )
-        self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
+        assert second.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_cannot_book_in_past(self):
         self._register("l4@test.de", "LESSOR")
         self._register("r4@test.de", "RENTER")
         listing_id = self._create_listing(self._login("l4@test.de")).data["id"]
+
         self._auth(self._login("r4@test.de"))
         resp = self.client.post(
-            reverse("reservations:create"),
+            "/api/v1/reservations/",
             {
                 "listing": listing_id,
                 "start_date": (self.today - timedelta(days=2)).isoformat(),
@@ -183,7 +186,7 @@ class CozyBookingFlowTests(APITestCase):
             },
             format="json",
         )
-        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_review_requires_checked_in(self):
         self._register("l5@test.de", "LESSOR")
@@ -194,7 +197,7 @@ class CozyBookingFlowTests(APITestCase):
 
         self._auth(renter_token)
         booking = self.client.post(
-            reverse("reservations:create"),
+            "/api/v1/reservations/",
             {
                 "listing": listing_id,
                 "start_date": (self.today + timedelta(days=30)).isoformat(),
@@ -205,11 +208,11 @@ class CozyBookingFlowTests(APITestCase):
         reservation_id = booking.data["id"]
 
         resp = self.client.post(
-            reverse("reviews:create"),
+            "/api/v1/reviews/",
             {"reservation": reservation_id, "rating": 4, "comment": "рано"},
             format="json",
         )
-        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_cannot_resurrect_canceled_reservation(self):
         self._register("l6@test.de", "LESSOR")
@@ -220,7 +223,7 @@ class CozyBookingFlowTests(APITestCase):
 
         self._auth(renter_token)
         booking = self.client.post(
-            reverse("reservations:create"),
+            "/api/v1/reservations/",
             {
                 "listing": listing_id,
                 "start_date": (self.today + timedelta(days=40)).isoformat(),
@@ -230,20 +233,21 @@ class CozyBookingFlowTests(APITestCase):
         )
         reservation_id = booking.data["id"]
 
+        self._auth(renter_token)
         cancel = self.client.patch(
-            reverse("reservations:status", args=[reservation_id]),
+            f"/api/v1/reservations/{reservation_id}/cancel/",
             {"status": StatusChoices.CANCELED},
             format="json",
         )
-        self.assertEqual(cancel.status_code, status.HTTP_200_OK)
+        assert cancel.status_code == status.HTTP_200_OK
 
         self._auth(lessor_token)
         resurrect = self.client.patch(
-            reverse("reservations:status", args=[reservation_id]),
+            f"/api/v1/reservations/{reservation_id}/confirm/",
             {"status": StatusChoices.CONFIRMED},
             format="json",
         )
-        self.assertEqual(resurrect.status_code, status.HTTP_400_BAD_REQUEST)
+        assert resurrect.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_cannot_book_inactive_listing(self):
         self._register("l7@test.de", "LESSOR")
@@ -253,11 +257,12 @@ class CozyBookingFlowTests(APITestCase):
         listing_id = self._create_listing(lessor_token).data["id"]
 
         self._auth(lessor_token)
-        self.client.post(reverse("listings:availability", args=[listing_id]))
+        toggle_resp = self.client.post(f"/api/v1/listings/{listing_id}/availability/")
+        assert toggle_resp.status_code == 200
 
         self._auth(renter_token)
         resp = self.client.post(
-            reverse("reservations:create"),
+            "/api/v1/reservations/",
             {
                 "listing": listing_id,
                 "start_date": (self.today + timedelta(days=50)).isoformat(),
@@ -265,11 +270,11 @@ class CozyBookingFlowTests(APITestCase):
             },
             format="json",
         )
-        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_weak_password_rejected(self):
         resp = self.client.post(
-            reverse("users:register"),
+            "/api/v1/users/register/",
             {
                 "name": "Weak",
                 "email": "weak@test.de",
@@ -278,4 +283,4 @@ class CozyBookingFlowTests(APITestCase):
             },
             format="json",
         )
-        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST

@@ -1,7 +1,7 @@
-
 from django.urls import path
 
 from apps.users.controller.auth_controllers import (
+    DeleteAccountController,
     LoginController,
     LogoutController,
     RefreshController,
@@ -15,4 +15,5 @@ urlpatterns = [
     path("login/", LoginController.as_view(), name="login"),
     path("logout/", LogoutController.as_view(), name="logout"),
     path("token/refresh/", RefreshController.as_view(), name="token-refresh"),
+    path("me/", DeleteAccountController.as_view(), name="delete-account"),
 ]

@@ -1,4 +1,3 @@
-
 SEARCH = "search"
 
 LOCATION = "location"

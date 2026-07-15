@@ -1,16 +1,12 @@
-
 from django.conf import settings
 from django.core.exceptions import ValidationError
-
 from django.db import models
 from django.db.models import Q
-
 
 from apps.common.models.base import BaseModel
 
 
 class SearchHistory(BaseModel):
-
     keyword = models.CharField(max_length=255)
 
     user = models.ForeignKey(
@@ -23,6 +19,7 @@ class SearchHistory(BaseModel):
 
     class Meta:
         db_table = "search_history"
+
         indexes = [
             models.Index(fields=["keyword"]),
         ]

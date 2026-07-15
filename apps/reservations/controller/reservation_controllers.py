@@ -6,17 +6,14 @@ from rest_framework.views import APIView
 from apps.reservations.dto.reservation_serializers import (
     ReservationCreateSerializer,
     ReservationResponseSerializer,
-    ReservationStatusUpdateSerializer,
 )
 from apps.reservations.services.reservation_service import ReservationService
-
-_TAG = "Бронирования"
 
 
 class ReservationCreateController(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         serializer = ReservationCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -29,10 +26,40 @@ class ReservationCreateController(APIView):
         )
 
 
+class ReservationConfirmController(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, reservation_id, *args, **kwargs):
+        reservation = ReservationService().confirm_reservation(
+            request.user, reservation_id
+        )
+        return Response(ReservationResponseSerializer(reservation).data)
+
+
+class ReservationCheckInController(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, reservation_id, *args, **kwargs):
+        reservation = ReservationService().check_in_reservation(
+            request.user, reservation_id
+        )
+        return Response(ReservationResponseSerializer(reservation).data)
+
+
+class ReservationCancelController(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, reservation_id, *args, **kwargs):
+        reservation = ReservationService().cancel_reservation(
+            request.user, reservation_id
+        )
+        return Response(ReservationResponseSerializer(reservation).data)
+
+
 class MyReservationsController(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         reservations = ReservationService().get_my_reservations(request.user)
         return Response(ReservationResponseSerializer(reservations, many=True).data)
 
@@ -40,19 +67,6 @@ class MyReservationsController(APIView):
 class LessorReservationsController(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def get(self, request, *args, **kwargs):
         reservations = ReservationService().get_lessor_reservations(request.user)
         return Response(ReservationResponseSerializer(reservations, many=True).data)
-
-
-class ReservationStatusController(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def patch(self, request, reservation_id):
-        serializer = ReservationStatusUpdateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        reservation = ReservationService().update_status(
-            request.user, reservation_id, serializer.validated_data["status"]
-        )
-        return Response(ReservationResponseSerializer(reservation).data)

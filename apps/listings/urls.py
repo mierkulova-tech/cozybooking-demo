@@ -1,4 +1,3 @@
-
 from django.urls import path
 
 from apps.listings.controller.apartment_controllers import (

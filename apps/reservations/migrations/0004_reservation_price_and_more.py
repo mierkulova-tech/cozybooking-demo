@@ -1,0 +1,38 @@
+
+from decimal import Decimal
+
+import django.core.validators
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+    dependencies = [
+        ("listings", "0003_alter_address_postal_code_alter_apartment_price_and_more"),
+        ("reservations", "0003_reservation_reservation_end_after_start_and_more"),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name="reservation",
+            name="price",
+            field=models.DecimalField(
+                decimal_places=2,
+                default=0.01,
+                max_digits=10,
+                validators=[
+                    django.core.validators.MinValueValidator(
+                        Decimal("0.01"), message="Цена должна быть больше нуля."
+                    )
+                ],
+            ),
+            preserve_default=False,
+        ),
+        migrations.AddConstraint(
+            model_name="reservation",
+            constraint=models.CheckConstraint(
+                condition=models.Q(("price__gt", 0)), name="reservation_price_positive"
+            ),
+        ),
+    ]

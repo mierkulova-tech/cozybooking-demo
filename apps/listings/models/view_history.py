@@ -1,13 +1,10 @@
-
 from django.conf import settings
-
 from django.db import models
 
 from apps.common.models.base import BaseModel
 
 
 class ViewHistory(BaseModel):
-
     apartment = models.ForeignKey(
         "listings.Apartment",
         on_delete=models.CASCADE,

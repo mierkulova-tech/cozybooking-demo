@@ -1,17 +1,13 @@
-
 from django.db.models import QuerySet
 
 from apps.listings.constants.filter_constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
-
 from apps.listings.errors.listings_errors import PageParameterError
 
 
 class Paginator:
-
     def paginate(
         self, queryset: QuerySet, page: int | None, page_size: int | None
     ) -> dict:
-
         page = page or 1
 
         page_size = page_size or DEFAULT_PAGE_SIZE

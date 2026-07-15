@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "CozyBooking API",
-    "description": "Полный сценарий демонстрации backend аренды жилья.\n\nПорядок запуска (сверху вниз):\n1. Auth → Register Lessor, Register Renter, Login Lessor, Login Renter\n   (логины сами сохраняют токены в переменные коллекции)\n2. Listings → Create Listing (сохраняет listing_id), затем каталог/карточка/и т.д.\n3. Reservations → Create (сохраняет reservation_id), Confirm, Check-in\n4. Reviews → Create Review, Listing Reviews\n\nПеременная base_url по умолчанию http://127.0.0.1:8000",
+    "name": "CozyBooking API v1",
+    "description": "Актуальная Postman-коллекция для CozyBooking (июль 2026).\n\nПорядок:\n1. Auth (register + login)\n2. Listings (create + catalog)\n3. Reservations\n4. Reviews\n\nbase_url = http://127.0.0.1:8000\nversion = v1",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -12,13 +12,8 @@
           "name": "Register Lessor",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{base_url}}/api/users/register/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/{{version}}/users/register/",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Host Johan\",\n  \"email\": \"l1@test.de\",\n  \"password\": \"SecurePass123!\",\n  \"role\": \"LESSOR\"\n}"
@@ -29,13 +24,8 @@
           "name": "Register Renter",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{base_url}}/api/users/register/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/{{version}}/users/register/",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Guest Alex\",\n  \"email\": \"r1@test.de\",\n  \"password\": \"SecurePass123!\",\n  \"role\": \"RENTER\"\n}"
@@ -44,36 +34,22 @@
         },
         {
           "name": "Login Lessor",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "const jsonData = pm.response.json();",
-                  "if (jsonData.access) {",
-                  "    pm.collectionVariables.set(\"access_lessor\", jsonData.access);",
-                  "}",
-                  "if (jsonData.user && jsonData.user.id) {",
-                  "    pm.collectionVariables.set(\"lessor_user_id\", jsonData.user.id);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                "const json = pm.response.json();",
+                "if (json.access) pm.collectionVariables.set(\"access_lessor\", json.access);",
+                "if (json.user?.id) pm.collectionVariables.set(\"lessor_user_id\", json.user.id);"
+              ],
+              "type": "text/javascript"
             }
-          ],
+          }],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{base_url}}/api/users/login/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/{{version}}/users/login/",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"l1@test.de\",\n  \"password\": \"SecurePass123!\"\n}"
@@ -82,40 +58,38 @@
         },
         {
           "name": "Login Renter",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "const jsonData = pm.response.json();",
-                  "if (jsonData.access) {",
-                  "    pm.collectionVariables.set(\"access_renter\", jsonData.access);",
-                  "}",
-                  "if (jsonData.user && jsonData.user.id) {",
-                  "    pm.collectionVariables.set(\"renter_user_id\", jsonData.user.id);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                "const json = pm.response.json();",
+                "if (json.access) pm.collectionVariables.set(\"access_renter\", json.access);",
+                "if (json.user?.id) pm.collectionVariables.set(\"renter_user_id\", json.user.id);"
+              ],
+              "type": "text/javascript"
             }
-          ],
+          }],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": "{{base_url}}/api/users/login/",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/api/{{version}}/users/login/",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"r1@test.de\",\n  \"password\": \"SecurePass123!\"\n}"
             }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_lessor}}" }
+            ],
+            "url": "{{base_url}}/api/{{version}}/users/logout/",
+            "body": { "mode": "raw", "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}" }
           }
         }
       ]
@@ -124,48 +98,44 @@
       "name": "2. Listings",
       "item": [
         {
-          "name": "Create Listing (lessor)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 201\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "const jsonData = pm.response.json();",
-                  "if (jsonData.id) {",
-                  "    pm.collectionVariables.set(\"listing_id\", jsonData.id);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Create Listing (Lessor)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test(\"201\", () => pm.response.to.have.status(201));", "pm.collectionVariables.set(\"listing_id\", pm.response.json().id);"] }
+          }],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_lessor}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_lessor}}" }
             ],
-            "url": "{{base_url}}/api/listings/",
+            "url": "{{base_url}}/api/{{version}}/listings/",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Modern Studio near City Center\",\n  \"description\": \"Beautiful and bright apartment fully furnished.\",\n  \"price\": 1200,\n  \"rooms\": 2,\n  \"housing_type\": \"STUDIO\",\n  \"address\": {\n    \"land\": \"Steiermark\",\n    \"city\": \"Graz\",\n    \"street\": \"Georgigasse 87\",\n    \"postal_code\": \"8020\"\n  }\n}"
+              "raw": "{\n  \"title\": \"Modern Studio\",\n  \"description\": \"Cozy place\",\n  \"price\": 1200,\n  \"rooms\": 2,\n  \"housing_type\": \"STUDIO\",\n  \"address\": {\n    \"land\": \"Steiermark\",\n    \"city\": \"Graz\",\n    \"street\": \"Georgigasse 87\",\n    \"postal_code\": \"8020\"\n  }\n}"
             }
           }
         },
         {
-          "name": "Catalog (public)",
+          "name": "Catalog (Public)",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/api/listings/"
+            "url": "{{base_url}}/api/{{version}}/listings/"
+          }
+        },
+        {
+          "name": "My Listings (Lessor)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_lessor}}" }],
+            "url": "{{base_url}}/api/{{version}}/listings/my/"
+          }
+        },
+        {
+          "name": "Listing Detail",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/api/{{version}}/listings/{{listing_id}}/"
           }
         }
       ]
@@ -174,37 +144,15 @@
       "name": "3. Reservations",
       "item": [
         {
-          "name": "Create Reservation (renter)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 201\", function () {",
-                  "    pm.response.to.have.status(201);",
-                  "});",
-                  "const jsonData = pm.response.json();",
-                  "if (jsonData.id) {",
-                  "    pm.collectionVariables.set(\"reservation_id\", jsonData.id);",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Create Reservation (Renter)",
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"201\", () => pm.response.to.have.status(201));", "pm.collectionVariables.set(\"reservation_id\", pm.response.json().id);"] } }],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_renter}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_renter}}" }
             ],
-            "url": "{{base_url}}/api/reservations/",
+            "url": "{{base_url}}/api/{{version}}/reservations/",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"listing\": {{listing_id}},\n  \"start_date\": \"2026-08-01\",\n  \"end_date\": \"2026-08-15\"\n}"
@@ -212,45 +160,37 @@
           }
         },
         {
-          "name": "Confirm (lessor)",
+          "name": "Confirm (Lessor)",
           "request": {
             "method": "PATCH",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_lessor}}"
-              }
+              { "key": "Authorization", "value": "Bearer {{access_lessor}}" }
             ],
-            "url": "{{base_url}}/api/reservations/{{reservation_id}}/status/",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"CONFIRMED\"\n}"
-            }
+            "url": "{{base_url}}/api/{{version}}/reservations/{{reservation_id}}/confirm/"
           }
         },
         {
-          "name": "Check-in (lessor)",
+          "name": "Check-in (Lessor)",
           "request": {
             "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_lessor}}"
-              }
-            ],
-            "url": "{{base_url}}/api/reservations/{{reservation_id}}/status/",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"CHECKED_IN\"\n}"
-            }
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_lessor}}" }],
+            "url": "{{base_url}}/api/{{version}}/reservations/{{reservation_id}}/check-in/"
+          }
+        },
+        {
+          "name": "Cancel (Renter)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_renter}}" }],
+            "url": "{{base_url}}/api/{{version}}/reservations/{{reservation_id}}/cancel/"
+          }
+        },
+        {
+          "name": "My Reservations",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_renter}}" }],
+            "url": "{{base_url}}/api/{{version}}/reservations/my/"
           }
         }
       ]
@@ -259,31 +199,25 @@
       "name": "4. Reviews",
       "item": [
         {
-          "name": "Create Review (renter)",
+          "name": "Create Review (Renter)",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{access_renter}}"
-              }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_renter}}" }
             ],
-            "url": "{{base_url}}/api/reviews/",
+            "url": "{{base_url}}/api/{{version}}/reviews/",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reservation\": {{reservation_id}},\n  \"rating\": 5,\n  \"comment\": \"Everything was perfect! Cozy and neat!\"\n}"
+              "raw": "{\n  \"reservation\": {{reservation_id}},\n  \"rating\": 5,\n  \"comment\": \"Perfect stay!\"\n}"
             }
           }
         },
         {
-          "name": "Listing Reviews (public)",
+          "name": "Listing Reviews (Public)",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/api/reviews/listing/{{listing_id}}/"
+            "url": "{{base_url}}/api/{{version}}/reviews/listing/{{listing_id}}/"
           }
         }
       ]
@@ -291,11 +225,10 @@
   ],
   "variable": [
     { "key": "base_url", "value": "http://127.0.0.1:8000" },
+    { "key": "version", "value": "v1" },
     { "key": "access_lessor", "value": "" },
     { "key": "access_renter", "value": "" },
     { "key": "listing_id", "value": "" },
-    { "key": "reservation_id", "value": "" },
-    { "key": "lessor_user_id", "value": "" },
-    { "key": "renter_user_id", "value": "" }
+    { "key": "reservation_id", "value": "" }
   ]
 }
