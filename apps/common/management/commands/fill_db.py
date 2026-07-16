@@ -23,6 +23,13 @@ class Command(BaseCommand):
         fake = Faker(["en_US", "de_DE"])
 
         self.stdout.write("=== Начинаю наполнение базы данных CozyBooking ===")
+        if Apartment.objects.exists():
+            self.stdout.write(
+                self.style.WARNING(
+                    "Демо-данные уже есть в базе — пропускаю наполнение."
+                )
+            )
+            return
 
         users = self._create_users(fake)
         lessors = [user for user in users if user.role == RoleChoices.LESSOR]

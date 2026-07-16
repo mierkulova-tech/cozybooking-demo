@@ -4,9 +4,14 @@
 
 Полнофункциональное back-end-приложение (REST API) для аренды жилья: объявления,
 поиск и фильтрация, роли пользователей, бронирования и отзывы. Финальный проект
-курса Python Advanced (It Career Hub).
+курса Python Advanced ([It Career Hub](https://itcareerhub.de/at/python-developer)).
 
 **Стек:** Django 5 · Django REST Framework · JWT (SimpleJWT) · PostgreSQL (осн.) / SQLite (dev) · Docker.
+
+**Живой деплой:** https://cozybooking-api.onrender.com
+**Документация API (Swagger UI):** https://cozybooking-api.onrender.com/api/docs/
+    _Размещено на бесплатном тарифе Render — сервис "засыпает" после 15 минут без
+    запросов, первый запрос после этого может занять 30–60 секунд (холодный старт)._
 
 ---
 
@@ -82,7 +87,7 @@ source .venv/Scripts/activate      # Windows (Git Bash)
 # source .venv/bin/activate        # Linux/macOS
 
 # 2. Зависимости
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 
 # 3. Файл окружения
 cp .env.example .env               # postgresql=False → SQLite
@@ -103,13 +108,27 @@ API поднимется на `http://127.0.0.1:8000/`.
 Основная БД по требованиям проекта —PostgreSQL. Весь стек поднимается одной командой:
 
 ```bash
-cp .env.example .env               # значения БД для контейнера
+cp .env.example .env               
 docker compose up --build
 ```
 
 Что происходит: поднимается контейнер `db` (postgres:16-alpine) со health-check'ом, затем `web` дожидается доступности БД
 (`entrypoint.sh`), применяет миграции, собирает статику и стартует через **gunicorn**.
 Compose сам выставляет `postgresql=True`, `DB_HOST=db` и `DB_PORT=5432` для веб-контейнера.
+
+### 3.1. Деплой на Render (прод)
+
+Проект развёрнут на Render — веб-сервис собирается прямо из Dockerfile (используется тот же entrypoint.sh, что и в docker-compose.yml: миграции и collectstatic прогоняются автоматически при каждом старте), база — отдельный managed PostgreSQL.
+
+Переменные окружения на Render (Environment → веб-сервис):
+
+ПеременнаяЗначениеpostgresqlTrueDB_NAME / DB_USER / DB_PASSWORD / DB_HOST / DB_PORTиз блока Connections Render-базы (Internal, не External)SECRET_KEYсгенерированная случайная строкаDEBUGFalseALLOWED_HOSTS.onrender.com
+
+
+⚠️ Бесплатный тариф Render: веб-сервис засыпает после 15 минут простоя (холодный
+старт ~30–60 сек при следующем запросе), а бесплатная PostgreSQL живёт 30 дней
+с момента создания (+14 дней грейс-периода), после чего данные удаляются — при
+необходимости базу пересоздают заново (migrate + fill_db для демо-данных).
 
 ---
 
