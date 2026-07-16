@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-import sys
-import io
-import tokenize
 import ast
+import io
+import sys
+import tokenize
 
 
 def strip_docstrings(source: str) -> str:

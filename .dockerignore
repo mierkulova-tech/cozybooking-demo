@@ -169,7 +169,6 @@ cython_debug/
 .ruff_cache/
 
 # IDE
-.idea/
 .vscode/
 
 .env.*
@@ -184,3 +183,9 @@ docs/
 
 *.md
 .DS_Store
+
+apps/tests/
+assets/
+.github/
+setup_filter.ps1
+strip_comments.py

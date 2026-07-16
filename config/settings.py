@@ -33,6 +33,7 @@ THIRD_PARTY_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
+    "drf_spectacular",
 ]
 
 LOCAL_APPS = [
@@ -129,6 +130,29 @@ REST_FRAMEWORK = {
     "DEFAULT_VERSION": "v1",
     "ALLOWED_VERSIONS": ["v1"],
     "VERSION_PARAM": "version",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "CozyBooking API",
+    "DESCRIPTION": "API для управления бронированием жилья",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,
+        "displayOperationId": True,
+        "filter": True,
+    },
+    "SECURITY": [{"jwtAuth": []}],
+    "DEFAULT_VERSION": "v1",
+    "ALLOWED_VERSIONS": ["v1"],
+    "VERSION_PARAM": "version",
+    "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        "HousingTypeChoices": "apps.listings.choices.housing_choices.HousingTypeChoices",
+        "RoleChoices": "apps.users.choices.role_choices.RoleChoices",
+        "StatusChoices": "apps.reservations.choices.status_choices.StatusChoices",
+    },
 }
 
 SIMPLE_JWT = {
