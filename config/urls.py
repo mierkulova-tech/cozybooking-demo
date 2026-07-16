@@ -1,5 +1,5 @@
-from django.http import JsonResponse
 from django.contrib import admin
+from django.shortcuts import render
 from django.urls import include, path
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -9,13 +9,7 @@ from drf_spectacular.views import (
 
 
 def home(request):
-    return JsonResponse(
-        {
-            "message": "Добро пожаловать в CozyBooking API!",
-            "docs": "/api/docs/",
-            "admin": "/admin/",
-        }
-    )
+    return render(request, "index.html")
 
 
 urlpatterns = [

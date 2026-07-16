@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CozyBooking API</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #FBF5E9;
+            --panel: #FFFFFF;
+            --card: #F5EBD8;
+            --ink: #2E2620;
+            --ink-muted: #7A6C5A;
+            --ink-faint: #A6997F;
+            --terracotta: #C1622D;
+            --terracotta-deep: #9C4B21;
+            --olive: #6E7A4E;
+            --wine: #7A2E2E;
+            --gold: #C99A3E;
+            --hairline: rgba(46, 38, 32, 0.14);
+            --radius: 10px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: 'Inter', -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            line-height: 1.6;
+        }
+
+        .wrap {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ---------- nav ---------- */
+
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 32px 0 0;
+        }
+
+        .wordmark {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            color: var(--ink);
+            text-decoration: none;
+        }
+
+        .wordmark span { color: var(--terracotta); font-style: italic; }
+
+        .nav-links {
+            display: flex;
+            gap: 28px;
+        }
+
+        .nav-links a {
+            color: var(--ink-muted);
+            text-decoration: none;
+            font-size: 14px;
+            letter-spacing: 0.02em;
+            transition: color 0.15s ease;
+        }
+
+        .nav-links a:hover, .nav-links a:focus-visible { color: var(--terracotta-deep); }
+
+        /* ---------- hero ---------- */
+
+        header.hero {
+            padding: 88px 0 68px;
+            opacity: 0;
+            animation: rise 0.7s ease forwards;
+        }
+
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .eyebrow {
+            font-family: 'Cormorant Garamond', serif;
+            font-style: italic;
+            font-size: 17px;
+            color: var(--olive);
+            margin: 0 0 18px;
+        }
+
+        h1.headline {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 600;
+            font-size: clamp(44px, 6.4vw, 66px);
+            line-height: 1.06;
+            margin: 0 0 20px;
+            max-width: 13ch;
+            color: var(--ink);
+        }
+
+        .sub {
+            font-size: 17px;
+            color: var(--ink-muted);
+            max-width: 48ch;
+            margin: 0 0 36px;
+        }
+
+        .cta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 999px;
+            font-size: 14.5px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .btn:active { transform: scale(0.97); }
+
+        .btn-primary {
+            background: var(--terracotta);
+            color: #FFF8ED;
+        }
+
+        .btn-primary:hover, .btn-primary:focus-visible { background: var(--terracotta-deep); }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--ink);
+            border: 1px solid var(--hairline);
+        }
+
+        .btn-ghost:hover, .btn-ghost:focus-visible {
+            border-color: var(--olive);
+            color: var(--olive);
+        }
+
+        a:focus-visible, .btn:focus-visible {
+            outline: 2px solid var(--terracotta);
+            outline-offset: 2px;
+        }
+
+        /* ---------- menu board (directory) ---------- */
+
+        section.directory { padding: 8px 0 64px; }
+
+        .section-label {
+            font-family: 'Cormorant Garamond', serif;
+            font-style: italic;
+            font-size: 16px;
+            color: var(--olive);
+            margin: 0 0 4px;
+        }
+
+        h2.section-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 600;
+            font-size: 28px;
+            margin: 0 0 28px;
+            color: var(--ink);
+        }
+
+        .menu-board {
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            border-radius: 14px;
+            padding: 12px 8px;
+        }
+
+        .menu-row {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            padding: 15px 16px;
+            text-decoration: none;
+            color: inherit;
+            border-radius: 8px;
+            transition: background 0.15s ease;
+        }
+
+        .menu-row:hover, .menu-row:focus-visible { background: var(--card); }
+
+        .menu-row + .menu-row { border-top: 1px dashed var(--hairline); }
+
+        .menu-no {
+            font-family: 'Cormorant Garamond', serif;
+            font-style: italic;
+            font-size: 15px;
+            color: var(--terracotta);
+            flex-shrink: 0;
+            width: 30px;
+        }
+
+        .menu-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 600;
+            font-size: 18px;
+            color: var(--ink);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .menu-leader {
+            flex: 1;
+            border-bottom: 2px dotted var(--ink-faint);
+            height: 1em;
+            margin: 0 4px;
+            min-width: 20px;
+        }
+
+        .menu-path {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--ink-muted);
+            flex-shrink: 0;
+            text-align: right;
+            overflow-wrap: anywhere;
+        }
+
+        /* ---------- amenities ---------- */
+
+        section.amenities { padding: 0 0 64px; }
+
+        .amenity-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .amenity {
+            background: var(--panel);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius);
+            padding: 20px 20px 18px;
+        }
+
+        .amenity-mark {
+            width: 22px;
+            height: 2px;
+            background: var(--terracotta);
+            margin-bottom: 16px;
+        }
+
+        .amenity h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-weight: 600;
+            font-size: 19px;
+            margin: 0 0 6px;
+            color: var(--ink);
+        }
+
+        .amenity p {
+            font-size: 13.5px;
+            color: var(--ink-muted);
+            margin: 0;
+        }
+
+        /* ---------- footer ---------- */
+
+        footer {
+            border-top: 1px solid var(--hairline);
+            padding: 32px 0 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .footer-note {
+            font-family: 'Cormorant Garamond', serif;
+            font-style: italic;
+            font-size: 15px;
+            color: var(--ink-faint);
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .footer-links a {
+            font-size: 13px;
+            color: var(--ink-muted);
+            text-decoration: none;
+        }
+
+        .footer-links a:hover, .footer-links a:focus-visible { color: var(--terracotta-deep); }
+
+        @media (max-width: 600px) {
+            .amenity-grid { grid-template-columns: 1fr; }
+            nav { flex-direction: column; align-items: flex-start; gap: 14px; }
+            .menu-title { font-size: 16px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            header.hero { animation: none; opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="wrap">
+
+    <nav>
+        <a href="/" class="wordmark">cozy<span>booking</span></a>
+        <div class="nav-links">
+            <a href="/api/docs/">Docs</a>
+            <a href="/api/redoc/">ReDoc</a>
+            <a href="/admin/">Admin</a>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <p class="eyebrow">Willkommen — Django REST Framework property rental API</p>
+        <h1 class="headline">Ferienglück – gebucht in Sekunden.</h1>
+        <p class="sub">
+            A property rental platform built end to end on a layered controller → service → repository
+            architecture, with JWT auth, role-based permissions, and race-condition-safe reservations.
+        </p>
+        <div class="cta-row">
+            <a href="/api/docs/" class="btn btn-primary">View API docs</a>
+            <a href="/admin/" class="btn btn-ghost">Admin panel</a>
+            <a href="https://github.com/mierkulova-tech/cozybooking-demo" class="btn btn-ghost">Source on GitHub</a>
+        </div>
+    </header>
+
+    <section class="directory">
+        <p class="section-label">Die Übersicht</p>
+        <h2 class="section-title">The menu of routes</h2>
+        <div class="menu-board">
+            <a href="/api/docs/" class="menu-row">
+                <span class="menu-no">01</span>
+                <span class="menu-title">API documentation</span>
+                <span class="menu-leader"></span>
+                <span class="menu-path">/api/docs/</span>
+            </a>
+            <a href="/api/redoc/" class="menu-row">
+                <span class="menu-no">02</span>
+                <span class="menu-title">ReDoc reference</span>
+                <span class="menu-leader"></span>
+                <span class="menu-path">/api/redoc/</span>
+            </a>
+            <a href="/api/v1/listings/" class="menu-row">
+                <span class="menu-no">03</span>
+                <span class="menu-title">Listings</span>
+                <span class="menu-leader"></span>
+                <span class="menu-path">/api/v1/listings/</span>
+            </a>
+            <a href="/api/v1/reservations/" class="menu-row">
+                <span class="menu-no">04</span>
+                <span class="menu-title">Reservations</span>
+                <span class="menu-leader"></span>
+                <span class="menu-path">/api/v1/reservations/</span>
+            </a>
+            <a href="/api/v1/reviews/" class="menu-row">
+                <span class="menu-no">05</span>
+                <span class="menu-title">Reviews</span>
+                <span class="menu-leader"></span>
+                <span class="menu-path">/api/v1/reviews/</span>
+            </a>
+            <a href="/admin/" class="menu-row">
+                <span class="menu-no">06</span>
+                <span class="menu-title">Admin panel</span>
+                <span class="menu-leader"></span>
+                <span class="menu-path">/admin/</span>
+            </a>
+        </div>
+    </section>
+
+    <section class="amenities">
+        <p class="section-label">Unsere Vorzüge</p>
+        <h2 class="section-title">What's included</h2>
+        <div class="amenity-grid">
+            <div class="amenity">
+                <div class="amenity-mark"></div>
+                <h3>Secure check-in</h3>
+                <p>JWT authentication with role-based permissions for guests, hosts, and admins.</p>
+            </div>
+            <div class="amenity">
+                <div class="amenity-mark"></div>
+                <h3>No double bookings</h3>
+                <p>Row-level locking and atomic transactions prevent overlapping reservations.</p>
+            </div>
+            <div class="amenity">
+                <div class="amenity-mark"></div>
+                <h3>Clean records</h3>
+                <p>Controller → service → repository layering keeps business logic out of views.</p>
+            </div>
+            <div class="amenity">
+                <div class="amenity-mark"></div>
+                <h3>Well-kept house</h3>
+                <p>PostgreSQL, custom application errors, and typed DTOs at every boundary.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p class="footer-note">CozyBooking — graduation project, 2026</p>
+        <div class="footer-links">
+            <a href="https://github.com/mierkulova-tech">GitHub</a>
+            <a href="https://linkedin.com/in/o-mierkulova/">LinkedIn</a>
+        </div>
+    </footer>
+
+</div>
+
+</body>
+</html>
