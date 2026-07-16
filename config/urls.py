@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.contrib import admin
 from django.urls import include, path
 from drf_spectacular.views import (
@@ -6,7 +7,19 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+
+def home(request):
+    return JsonResponse(
+        {
+            "message": "Добро пожаловать в CozyBooking API!",
+            "docs": "/api/docs/",
+            "admin": "/admin/",
+        }
+    )
+
+
 urlpatterns = [
+    path("", home, name="home"),
     path("admin/", admin.site.urls),
     path("api/<str:version>/", include("apps.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

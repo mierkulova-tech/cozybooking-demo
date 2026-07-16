@@ -9,7 +9,7 @@ done
 echo "База доступна."
 
 python manage.py migrate --noinput
-python manage.py collectstatic --noinput || true
+python manage.py collectstatic --noinput
 
 python manage.py shell -c "
 import os
