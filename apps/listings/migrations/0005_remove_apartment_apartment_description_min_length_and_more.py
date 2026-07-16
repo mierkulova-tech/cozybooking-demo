@@ -1,0 +1,39 @@
+
+import django.core.validators
+from decimal import Decimal
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+    dependencies = [
+        ("listings", "0004_apartment_views_count_and_more"),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.RemoveConstraint(
+            model_name="apartment",
+            name="apartment_description_min_length",
+        ),
+        migrations.AlterField(
+            model_name="apartment",
+            name="price",
+            field=models.DecimalField(
+                decimal_places=2,
+                max_digits=10,
+                validators=[
+                    django.core.validators.MinValueValidator(
+                        Decimal("0.01"), message="Цена должна быть больше нуля."
+                    )
+                ],
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="apartment",
+            constraint=models.CheckConstraint(
+                condition=models.Q(("description__length__gte", 5)),
+                name="apartment_description_min_length",
+            ),
+        ),
+    ]
