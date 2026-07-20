@@ -1,8 +1,8 @@
 """Management command module for seeding the CozyBooking database with demo data.
 
 This module provides a Django custom management command to populate the database
-with mock users (renters and lessors), addresses, apartment listings, and reservations
-using the Faker library.
+with mock users (renters and lessors), addresses, apartment listings, reservations,
+and reviews using the Faker library.
 """
 
 import random
@@ -18,6 +18,7 @@ from apps.listings.models.address import Address
 from apps.listings.models.apartment import Apartment
 from apps.reservations.choices.status_choices import StatusChoices
 from apps.reservations.models.reservation import Reservation
+from apps.reviews.models import Review
 from apps.users.choices.role_choices import RoleChoices
 
 User = get_user_model()
@@ -47,7 +48,8 @@ class Command(BaseCommand):
 
         apartments = self._create_apartments(fake, lessors)
 
-        self._create_reservations(apartments, renters)
+        reservations = self._create_reservations(apartments, renters)
+        self._create_reviews(fake, reservations)
 
         self.stdout.write(self.style.SUCCESS("=== CozyBooking database is ready for use ==="))
 
@@ -154,6 +156,9 @@ class Command(BaseCommand):
         Args:
             apartments (list): A list of Apartment instances.
             renters (list): A list of User instances with the renter role.
+
+        Returns:
+            list: A list of created Reservation instances.
         """
         today = timezone.now().date()
 
@@ -161,28 +166,63 @@ class Command(BaseCommand):
             StatusChoices.PENDING,
             StatusChoices.CONFIRMED,
             StatusChoices.CANCELED,
+            StatusChoices.CHECKED_IN,
         ]
 
-        reservations_count = 0
+        reservations = []
 
         for apartment in apartments:
-            start_date = today + timedelta(days=random.randint(5, 30))
+            status = random.choice(statuses)
 
-            end_date = start_date + timedelta(days=random.randint(5, 20))
+            if status == StatusChoices.CHECKED_IN:
+                start_date = today - timedelta(days=random.randint(10, 20))
+                end_date = today - timedelta(days=random.randint(1, 5))
+            else:
+                start_date = today + timedelta(days=random.randint(5, 30))
+                end_date = start_date + timedelta(days=random.randint(5, 20))
 
             nights = (end_date - start_date).days
-
             total_price = apartment.price * nights
 
-            Reservation.objects.create(
+            reservation = Reservation.objects.create(
                 listing=apartment,
                 user=random.choice(renters),
                 start_date=start_date,
                 end_date=end_date,
-                status=random.choice(statuses),
+                status=status,
                 price=total_price,
             )
 
-            reservations_count += 1
+            reservations.append(reservation)
 
-        self.stdout.write(f"Created reservations: {reservations_count}")
+        self.stdout.write(f"Created reservations: {len(reservations)}")
+
+        return reservations
+
+    def _create_reviews(self, fake, reservations):
+        """Create review records for checked-in reservations.
+
+        Args:
+            fake: The Faker instance.
+            reservations (list): A list of Reservation instances.
+
+        Returns:
+            int: The number of created Review instances.
+        """
+        checked_in = [r for r in reservations if r.status == StatusChoices.CHECKED_IN]
+
+        reviews_count = 0
+
+        for reservation in checked_in:
+            Review.objects.create(
+                listing=reservation.listing,
+                reservation=reservation,
+                user=reservation.user,
+                rating=random.randint(3, 5),
+                comment=fake["en_US"].sentence(nb_words=12),
+            )
+            reviews_count += 1
+
+        self.stdout.write(f"Created reviews: {reviews_count}")
+
+        return reviews_count
