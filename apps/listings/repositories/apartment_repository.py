@@ -4,7 +4,7 @@ This module encapsulates data access logic for apartments, addresses,
 as well as view and search history tracking.
 """
 
-from django.db.models import Count, QuerySet
+from django.db.models import Count, F, QuerySet
 
 from apps.listings.models import Address, Apartment, SearchHistory, ViewHistory
 
@@ -121,7 +121,10 @@ class ApartmentRepository:
         return Apartment.objects.filter(owner_id=owner_id, is_active=True).update(is_active=False)
 
     def add_view(self, apartment: Apartment, user) -> None:
-        """Record a view history entry for an apartment by a user (or anonymous).
+        """Record a view history entry and increment the view counter.
+
+        Creates a ViewHistory entry for the apartment and atomically
+        increments the apartment's denormalized views_count field.
 
         Args:
             apartment (Apartment): The apartment being viewed.
@@ -131,6 +134,7 @@ class ApartmentRepository:
             apartment=apartment,
             user=user if user and user.is_authenticated else None,
         )
+        Apartment.objects.filter(id=apartment.id).update(views_count=F("views_count") + 1)
 
     def add_search(self, keyword: str, user) -> None:
         """Record a search query keyword history entry.
@@ -158,3 +162,17 @@ class ApartmentRepository:
             .annotate(count=Count("id"))
             .order_by("-count")[:limit]
         )
+
+    def most_viewed_active(self, limit: int) -> list[Apartment]:
+        """Retrieve the most-viewed active apartments.
+
+        Uses the denormalized views_count counter for fast,
+        index-backed sorting instead of aggregating ViewHistory.
+
+        Args:
+            limit (int): The maximum number of listings to return.
+
+        Returns:
+            list[Apartment]: Active apartments ordered descending by views_count.
+        """
+        return list(self.active_queryset().order_by("-views_count")[:limit])
