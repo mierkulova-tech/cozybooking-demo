@@ -1,7 +1,6 @@
 """Business logic for browsing, creating, and managing apartment listings."""
 
 from django.db import transaction
-from django.db.models import Count
 
 from apps.common.utils.content import check_content_helper
 from apps.listings.errors.listings_errors import (
@@ -55,12 +54,12 @@ class ApartmentService:
         )
 
     def popular_searches(self) -> list:
+        """Return the most frequent search keywords, up to POPULAR_SEARCHES_LIMIT."""
+        return self.repository.popular_searches(self.POPULAR_SEARCHES_LIMIT)
+
+    def popular_listings(self) -> list:
         """Return the most-viewed active listings, up to POPULAR_SEARCHES_LIMIT."""
-        return list(
-            Apartment.objects.filter(is_active=True)
-            .annotate(views_count=Count("views", distinct=True))  # or 'viewhistory'
-            .order_by("-views_count")[: self.POPULAR_SEARCHES_LIMIT]
-        )
+        return self.repository.most_viewed_active(self.POPULAR_SEARCHES_LIMIT)
 
     def get_listing(self, apartment_id: int, user) -> "Apartment":
         """Fetch an active listing by ID and record a view for it.

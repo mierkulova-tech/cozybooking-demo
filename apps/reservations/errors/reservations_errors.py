@@ -50,17 +50,3 @@ class InvalidStatusTransitionError(ApplicationError):
 
     default_detail = "This status transition is not allowed."
     default_code = "invalid_status_transition"
-
-
-class RenterCancelOnlyError(ApplicationError):
-    """Raised when a renter attempts an action other than cancellation."""
-
-    default_detail = "Renters can only cancel reservations."
-    default_code = "renter_cancel_only"
-
-
-class LessorStatusError(ApplicationError):
-    """Raised when a lessor attempts an invalid status transition."""
-
-    default_detail = "Lessors can only confirm, reject, or mark check-in for reservations."
-    default_code = "lessor_status_error"

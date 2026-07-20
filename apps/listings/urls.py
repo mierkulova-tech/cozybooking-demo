@@ -12,6 +12,7 @@ from apps.listings.controller.apartment_controllers import (
     ListingDetailController,
     ListingListController,
     MyListingsController,
+    PopularListingsController,
     PopularSearchesController,
 )
 
@@ -24,6 +25,11 @@ urlpatterns = [
         "popular-searches/",
         PopularSearchesController.as_view(),
         name="popular-searches",
+    ),
+    path(
+        "popular-listings/",
+        PopularListingsController.as_view(),
+        name="popular-listings",
     ),
     path("<int:apartment_id>/", ListingDetailController.as_view(), name="detail"),
     path(

@@ -260,3 +260,29 @@ class PopularSearchesController(APIView):
             Response: A list of popular search queries.
         """
         return Response(ApartmentService().popular_searches())
+
+
+class PopularListingsController(APIView):
+    """API controller for exposing the most-viewed active listings."""
+
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=["Listings"],
+        summary="Popular listings",
+        description="Active listings ranked by view count.",
+        responses={200: ApartmentResponseSerializer(many=True)},
+    )
+    def get(self, request, *args, **kwargs):
+        """Retrieve the most-viewed active listings.
+
+        Args:
+            request: The HTTP request object.
+            *args: Variable length argument list.
+            **kwargs: Arbitrary keyword arguments.
+
+        Returns:
+            Response: A list of popular active listings.
+        """
+        apartments = ApartmentService().popular_listings()
+        return Response(ApartmentResponseSerializer(apartments, many=True).data)
