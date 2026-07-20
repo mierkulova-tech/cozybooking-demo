@@ -175,8 +175,10 @@ class Command(BaseCommand):
             status = random.choice(statuses)
 
             if status == StatusChoices.CHECKED_IN:
-                start_date = today - timedelta(days=random.randint(10, 20))
-                end_date = today - timedelta(days=random.randint(1, 5))
+                # start_date cannot be in the past (model-level validation),
+                # so simulate a guest who checked in today and is still staying.
+                start_date = today
+                end_date = today + timedelta(days=random.randint(3, 10))
             else:
                 start_date = today + timedelta(days=random.randint(5, 30))
                 end_date = start_date + timedelta(days=random.randint(5, 20))
