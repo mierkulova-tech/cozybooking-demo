@@ -1,3 +1,10 @@
+"""Management command module for seeding the CozyBooking database with demo data.
+
+This module provides a Django custom management command to populate the database
+with mock users (renters and lessors), addresses, apartment listings, and reservations
+using the Faker library.
+"""
+
 import random
 from datetime import timedelta
 
@@ -17,16 +24,19 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Наполнение базы CozyBooking демонстрационными данными"
+    """Django command to populate the CozyBooking database with demonstration data."""
+
+    help = "Populate the CozyBooking database with demonstration data."
 
     def handle(self, *args, **kwargs):
+        """Execute the database seeding routine."""
         fake = Faker(["en_US", "de_DE"])
 
-        self.stdout.write("=== Начинаю наполнение базы данных CozyBooking ===")
+        self.stdout.write("=== Starting CozyBooking database population ===")
         if Apartment.objects.exists():
             self.stdout.write(
                 self.style.WARNING(
-                    "Демо-данные уже есть в базе — пропускаю наполнение."
+                    "Demo data already exists in the database — skipping population."
                 )
             )
             return
@@ -39,11 +49,17 @@ class Command(BaseCommand):
 
         self._create_reservations(apartments, renters)
 
-        self.stdout.write(
-            self.style.SUCCESS("=== База данных CozyBooking готова к работе ===")
-        )
+        self.stdout.write(self.style.SUCCESS("=== CozyBooking database is ready for use ==="))
 
     def _create_users(self, fake):
+        """Create mock renter and lessor user accounts.
+
+        Args:
+            fake: The Faker instance for generating fake names.
+
+        Returns:
+            list: A list of created User model instances.
+        """
         users = []
 
         for index in range(6):
@@ -80,11 +96,20 @@ class Command(BaseCommand):
 
             users.append(user)
 
-        self.stdout.write(f"Обработано пользователей: {len(users)}")
+        self.stdout.write(f"Processed users: {len(users)}")
 
         return users
 
     def _create_apartments(self, fake, lessors):
+        """Create mock apartment listings with associated addresses assigned to lessors.
+
+        Args:
+            fake: The Faker instance.
+            lessors (list): A list of users with the lessor role.
+
+        Returns:
+            list: A list of created Apartment model instances.
+        """
         apartments = []
 
         housing_types = [
@@ -119,11 +144,17 @@ class Command(BaseCommand):
 
             apartments.append(apartment)
 
-        self.stdout.write(f"Создано объявлений: {len(apartments)}")
+        self.stdout.write(f"Created listings: {len(apartments)}")
 
         return apartments
 
     def _create_reservations(self, apartments, renters):
+        """Create random reservation records for the generated apartments and renters.
+
+        Args:
+            apartments (list): A list of Apartment instances.
+            renters (list): A list of User instances with the renter role.
+        """
         today = timezone.now().date()
 
         statuses = [
@@ -154,4 +185,4 @@ class Command(BaseCommand):
 
             reservations_count += 1
 
-        self.stdout.write(f"Создано бронирований: {reservations_count}")
+        self.stdout.write(f"Created reservations: {reservations_count}")

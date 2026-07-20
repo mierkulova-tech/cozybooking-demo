@@ -1,48 +1,66 @@
+"""Error classes for the reservations application."""
+
 from apps.common.exceptions.base import ApplicationError, PermissionDeniedError
 
 
 class DateInPastError(ApplicationError):
-    default_detail = "Даты бронирования не могут быть в прошлом."
+    """Raised when reservation dates are set in the past."""
+
+    default_detail = "Reservation dates cannot be in the past."
     default_code = "date_in_past"
 
 
 class StartDateGreaterEndDateError(ApplicationError):
-    default_detail = "Дата заезда должна быть раньше даты выезда."
+    """Raised when the check-in date is later than or equal to the check-out date."""
+
+    default_detail = "The check-in date must be earlier than the check-out date."
     default_code = "start_date_greater_end_date"
 
 
 class DateOccupiedError(ApplicationError):
-    default_detail = "На выбранные даты объявление уже забронировано."
+    """Raised when the listing is already booked for the selected dates."""
+
+    default_detail = "The listing is already booked for the selected dates."
     default_code = "date_is_occupied"
 
 
 class CannotBookOwnListingError(ApplicationError):
-    default_detail = "Нельзя бронировать собственное объявление."
+    """Raised when a user attempts to book their own listing."""
+
+    default_detail = "You cannot book your own listing."
     default_code = "cannot_book_own_listing"
 
 
 class ReservationPermissionDeniedError(PermissionDeniedError):
-    default_detail = "Нет прав на изменение этого бронирования."
+    """Raised when a user does not have permission to modify a reservation."""
+
+    default_detail = "You do not have permission to modify this reservation."
     default_code = "reservation_permission_denied"
 
 
+class CantBeCanceledError(ApplicationError):
+    """Raised when a reservation cannot be canceled in its current state."""
+
+    default_detail = "This reservation cannot be canceled."
+    default_code = "cant_be_canceled"
+
+
+class InvalidStatusTransitionError(ApplicationError):
+    """Raised when a reservation status change is not allowed from its current state."""
+
+    default_detail = "This status transition is not allowed."
+    default_code = "invalid_status_transition"
+
+
 class RenterCancelOnlyError(ApplicationError):
-    default_detail = "Арендатор может только отменить бронирование."
+    """Raised when a renter attempts an action other than cancellation."""
+
+    default_detail = "Renters can only cancel reservations."
     default_code = "renter_cancel_only"
 
 
 class LessorStatusError(ApplicationError):
-    default_detail = (
-        "Арендодатель может только подтвердить, отклонить или отметить заселение."
-    )
-    default_code = "lessor_status_invalid"
+    """Raised when a lessor attempts an invalid status transition."""
 
-
-class InvalidStatusTransitionError(ApplicationError):
-    default_detail = "Недопустимый переход статуса бронирования."
-    default_code = "invalid_status_transition"
-
-
-class CantBeCanceledError(ApplicationError):
-    default_detail = "Отмена возможна не позднее чем за 2 дня до заезда."
-    default_code = "cant_be_canceled"
+    default_detail = "Lessors can only confirm, reject, or mark check-in for reservations."
+    default_code = "lessor_status_error"

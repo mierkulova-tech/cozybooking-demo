@@ -1,3 +1,9 @@
+"""URL routing configuration for the users application.
+
+This module defines URL patterns for user authentication, registration,
+token refresh, and account management endpoints.
+"""
+
 from django.urls import path
 
 from apps.users.controller.auth_controllers import (

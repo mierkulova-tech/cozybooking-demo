@@ -1,3 +1,5 @@
+"""Apartment listing model with pricing, capacity, and moderation fields."""
+
 from decimal import Decimal
 
 from django.conf import settings
@@ -11,6 +13,8 @@ from apps.listings.choices.housing_choices import HousingTypeChoices
 
 
 class Apartment(BaseModel):
+    """A rentable apartment listing owned by a lessor."""
+
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -30,17 +34,13 @@ class Apartment(BaseModel):
     price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        validators=[
-            MinValueValidator(Decimal("0.01"), message="Цена должна быть больше нуля.")
-        ],
+        validators=[MinValueValidator(Decimal("0.01"), message="Price must be greater than zero.")],
     )
 
     rooms = models.PositiveSmallIntegerField(
         validators=[
-            MinValueValidator(1, message="Должна быть минимум 1 комната."),
-            MaxValueValidator(
-                5, message="Слишком много комнат — проверьте значение, максимум 5."
-            ),
+            MinValueValidator(1, message="Must have at least 1 room."),
+            MaxValueValidator(5, message="Too many rooms — please check the value, maximum is 5."),
         ]
     )
 
@@ -49,6 +49,8 @@ class Apartment(BaseModel):
     is_active = models.BooleanField(default=True)
 
     class Meta:
+        """Database table, indexes, and constraints for Apartment."""
+
         db_table = "apartments"
 
         ordering = ["-created_at"]
@@ -84,6 +86,7 @@ class Apartment(BaseModel):
         ]
 
     def clean(self):
+        """Strip whitespace and enforce minimum length on title/description."""
         if self.title:
             self.title = self.title.strip()
 
@@ -91,16 +94,16 @@ class Apartment(BaseModel):
             self.description = self.description.strip()
 
         if len(self.title) < 5:
-            raise ValidationError(
-                {"title": "Название должно содержать минимум 5 символов."}
-            )
+            raise ValidationError({"title": "Title must contain at least 5 characters."})
 
         if len(self.description.strip()) < 5:
-            raise ValidationError({"description": "Описание слишком короткое."})
+            raise ValidationError({"description": "Description is too short."})
 
     def save(self, *args, **kwargs):
+        """Run full validation before saving."""
         self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
+        """Return the apartment title and price."""
         return f"{self.title} — {self.price}€"

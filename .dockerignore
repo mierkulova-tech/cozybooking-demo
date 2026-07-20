@@ -187,5 +187,3 @@ docs/
 apps/tests/
 assets/
 .github/
-setup_filter.ps1
-strip_comments.py

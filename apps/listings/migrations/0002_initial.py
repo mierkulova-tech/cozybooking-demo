@@ -62,26 +62,18 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="apartment",
-            index=models.Index(
-                fields=["housing_type"], name="apartments_housing_0123af_idx"
-            ),
+            index=models.Index(fields=["housing_type"], name="apartments_housing_0123af_idx"),
         ),
         migrations.AddIndex(
             model_name="apartment",
-            index=models.Index(
-                fields=["is_active"], name="apartments_is_acti_e2dc23_idx"
-            ),
+            index=models.Index(fields=["is_active"], name="apartments_is_acti_e2dc23_idx"),
         ),
         migrations.AddIndex(
             model_name="searchhistory",
-            index=models.Index(
-                fields=["keyword"], name="search_hist_keyword_03b4bf_idx"
-            ),
+            index=models.Index(fields=["keyword"], name="search_hist_keyword_03b4bf_idx"),
         ),
         migrations.AddIndex(
             model_name="viewhistory",
-            index=models.Index(
-                fields=["apartment"], name="view_histor_apartme_b0545b_idx"
-            ),
+            index=models.Index(fields=["apartment"], name="view_histor_apartme_b0545b_idx"),
         ),
     ]

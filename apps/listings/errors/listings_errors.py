@@ -1,3 +1,5 @@
+"""Error classes for the listings application."""
+
 from apps.common.exceptions.base import (
     ApplicationError,
     NoContentError,
@@ -6,15 +8,21 @@ from apps.common.exceptions.base import (
 
 
 class ListingNotFoundError(NoContentError):
-    default_detail = "Объявление не найдено."
+    """Raised when the requested listing does not exist."""
+
+    default_detail = "Listing not found."
     default_code = "listing_not_found"
 
 
 class NotListingOwnerError(PermissionDeniedError):
-    default_detail = "Можно управлять только своими объявлениями."
+    """Raised when a user tries to manage a listing they do not own."""
+
+    default_detail = "You can only manage your own listings."
     default_code = "not_listing_owner"
 
 
 class PageParameterError(ApplicationError):
-    default_detail = "Некорректный параметр пагинации."
+    """Raised when an invalid pagination parameter is provided."""
+
+    default_detail = "Invalid pagination parameter."
     default_code = "invalid_page_parameter"

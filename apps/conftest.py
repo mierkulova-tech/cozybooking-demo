@@ -1,3 +1,10 @@
+"""Pytest fixtures and configuration settings for testing the cozybooking project.
+
+This module provides common test fixtures including API clients, test users with
+different roles (renter/lessor), mock addresses, apartments, reservations,
+and parameterized test hooks (`pytest_generate_tests`).
+"""
+
 import os
 from datetime import timedelta
 
@@ -6,11 +13,13 @@ from django.utils import timezone
 
 from apps.reservations.choices.status_choices import StatusChoices
 
+# Disable forced HTTPS redirect for testing environments
 os.environ["SECURE_SSL_REDIRECT"] = "False"
 
 
 @pytest.fixture
 def api_client():
+    """Provide an instance of Django REST Framework's APIClient for testing requests."""
     from rest_framework.test import APIClient
 
     return APIClient()
@@ -18,6 +27,7 @@ def api_client():
 
 @pytest.fixture
 def user_renter(db):
+    """Create and return a test user with the RENTER role."""
     from apps.users.models import User
 
     return User.objects.create_user(
@@ -30,6 +40,7 @@ def user_renter(db):
 
 @pytest.fixture
 def user_lessor(db):
+    """Create and return a test user with the LESSOR role."""
     from apps.users.models import User
 
     return User.objects.create_user(
@@ -42,6 +53,7 @@ def user_lessor(db):
 
 @pytest.fixture
 def address(db):
+    """Create and return a sample Address instance for listings."""
     from apps.listings.models import Address
 
     return Address.objects.create(
@@ -51,13 +63,16 @@ def address(db):
 
 @pytest.fixture
 def apartment(db, user_lessor, address):
+    """Create and return a sample Apartment listing owned by the test lessor."""
     from apps.listings.models import Apartment
 
     return Apartment.objects.create(
         owner=user_lessor,
         address=address,
-        title="Уютная студия в центре Мюнхена",
-        description="Просторная светлая студия с современным ремонтом, кухней, ванной и балконом. Полностью меблирована, Wi-Fi, стиральная машина. Идеально для длительного проживания.",
+        title="Cozy studio in the center of Munich",
+        description="Spacious and bright studio with modern renovation,"
+        "kitchen, bathroom, and balcony. Fully furnished, Wi-Fi,"
+        "washing machine. Ideal for long-term living.",
         price=1250,
         rooms=2,
         housing_type="STUDIO",
@@ -67,6 +82,7 @@ def apartment(db, user_lessor, address):
 
 @pytest.fixture
 def reservation(db, apartment, user_renter):
+    """Create and return a pending reservation for an apartment by a renter."""
     from apps.reservations.choices.status_choices import StatusChoices
     from apps.reservations.models import Reservation
 
@@ -82,19 +98,21 @@ def reservation(db, apartment, user_renter):
 
 @pytest.fixture
 def reservation_checked_in(db, reservation):
+    """Update a reservation status to CHECKED_IN and return it."""
     reservation.status = StatusChoices.CHECKED_IN
     reservation.save()
     return reservation
 
 
 def pytest_generate_tests(metafunc):
+    """Dynamically parameterize tests based on available fixture names."""
     if "filter_params" in metafunc.fixturenames:
         metafunc.parametrize(
             "filter_params",
             [
                 ({"price_min": 900, "price_max": 1400}, 5),
                 ({"rooms_min": 2}, 4),
-                ({"search": "студия"}, 3),
+                ({"search": "studio"}, 3),
                 ({"housing_type": "STUDIO"}, 6),
                 ({}, 10),
                 ({"order": "price"}, None),

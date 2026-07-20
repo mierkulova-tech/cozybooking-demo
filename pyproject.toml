@@ -1,0 +1,27 @@
+[tool.ruff]
+# Maximum line length for code formatting and linting checks
+line-length = 100
+extend-exclude = ["*/migrations/*"]
+
+# Target Python version for syntax parsing and feature support
+target-version = "py312"
+
+[tool.ruff.lint]
+# Enable specific rule sets:
+# E: pycodestyle errors, F: Pyflakes, I: isort (imports sorting), D: pydocstyle
+select = ["E", "F", "I", "D"]
+
+[tool.ruff.lint.pydocstyle]
+# Enforce Google docstring convention across codebase docstrings
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore docstring checks (D) for database migrations and test suites
+"**/migrations/*.py" = ["D"]
+"**/tests/*.py" = ["D"]
+# Ignore missing docstring warnings in package initialization files
+"**/__init__.py" = ["D104", "D100"]
+# Ignore docstring checks for management and utility scripts
+"manage.py" = ["D"]
+"strip_comments.py" = ["D"]
+"apps/conftest.py" = ["D"]

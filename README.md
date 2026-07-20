@@ -1,335 +1,259 @@
-# CozyBooking — backend системы аренды жилья
+# CozyBooking — Housing Rental System Backend
 ![Python](https://img.shields.io/badge/python-3.12-blue.svg)
 ![Django](https://img.shields.io/badge/django-5.1-green.svg)
 
-Полнофункциональное back-end-приложение (REST API) для аренды жилья: объявления,
-поиск и фильтрация, роли пользователей, бронирования и отзывы. Финальный проект
-курса Python Advanced ([It Career Hub](https://itcareerhub.de/at/python-developer)).
+A fully functional backend application (REST API) for housing rentals: listings, search and filtering, user roles, reservations, and reviews. Final project of the Python Advanced course ([It Career Hub](https://itcareerhub.de/at/python-developer)).
 
-**Стек:** Django 5 · Django REST Framework · JWT (SimpleJWT) · PostgreSQL (осн.) / SQLite (dev) · Docker.
+**Tech Stack:** Django 5 · Django REST Framework · JWT (SimpleJWT) · PostgreSQL (prod) / SQLite (dev) · Docker.
 
-**Живой деплой:** https://cozybooking-api.onrender.com
-**Документация API (Swagger UI):** https://cozybooking-api.onrender.com/api/docs/
-    _Размещено на бесплатном тарифе Render — сервис "засыпает" после 15 минут без
-    запросов, первый запрос после этого может занять 30–60 секунд (холодный старт)._
+**Live Deployment:** https://cozybooking-api.onrender.com
+**API Documentation (Swagger UI):** https://cozybooking-api.onrender.com/api/docs/
+    *_Hosted on Render's free tier — the service spins down after 15 minutes of inactivity, so the first request may take 30–60 seconds (cold start)._*
 
 ---
 
-## 1. Архитектура
+## 1. Architecture
 
-Проект построен по **слоёной (layered) архитектуре** — каждый слой отвечает строго
-за своё. Это главное, что оценивается по критериям «Архитектура» и «Качество кода».
+The project is built using a **layered architecture** — each layer has a strict, well-defined responsibility. This is the primary criterion evaluated for "Architecture" and "Code Quality".
 
 ```
 cozybooking/
-├── config/                 # настройки проекта (settings, главный urls, wsgi/asgi)
-├── apps/                   # ВСЕ приложения — отдельным пакетом
-│   ├── urls.py             # роутер, собирающий urls всех приложений
-│   ├── common/             # общий слой: базовая модель, permissions, ошибки, хелперы, management-команды
-│   ├── users/              # пользователи, роли, регистрация/логин/логаут (JWT)
-│   ├── listings/           # объявления, поиск/фильтры/сортировка, история поиска/просмотров
-│   ├── reservations/       # бронирования, пересечение дат, переходы статусов
-│   ├── reviews/            # отзывы и рейтинги
-│   └── tests/              # общие интеграционные и модельные тесты
+├── config/                 # Project settings (settings, main urls, wsgi/asgi)
+├── apps/                   # ALL applications bundled in a single package
+│   ├── urls.py             # Router collecting URLs from all apps
+│   ├── common/             # Shared layer: base model, permissions, errors, helpers, management commands
+│   ├── users/              # Users, roles, registration/login/logout (JWT)
+│   ├── listings/           # Listings, search/filters/sorting, search/view history
+│   ├── reservations/       # Reservations, date overlapping checks, status transitions
+│   ├── reviews/            # Reviews and ratings
+│   └── tests/              # General integration and model tests
 │
 ├── manage.py
 ├── requirements.txt
-├── strip_comments.py / .gitattributes / setup_filter.ps1   # git-фильтр для комментариев (см. п.9)
+├── .gitattributes
 │
 ├── Dockerfile / docker-compose.yml / entrypoint.sh
 └── .env.example
 ```
 
-Внутри каждого приложения — одинаковые слои:
+Each application follows an identical internal layer structure:
 
-| Папка | Ответственность | Правило |
+| Folder | Responsibility | Rule |
 |---|---|---|
-| `choices/` | Перечисления (роли, статусы, типы жилья) | только константы-enum |
-| `constants/` | Статические значения (ключи фильтров, размеры страниц) | только константы |
-| `dto/` | Сериализаторы | **только** валидация формы и (де)сериализация |
-| `errors/` | Доменные классы ошибок | понятный код + HTTP-статус |
-| `filters/` | Поиск, фильтрация, сортировка | чистая работа с ORM |
-| `paginations/` | Пагинация | срез + метаданные |
-| `models/` | Модели БД | описание таблиц + full_clean()/CheckConstraint (см. п.6)|
-| `repositories/` | Запросы в БД | **ТОЛЬКО** запросы, ничего лишнего |
-| `services/` | Бизнес-логика | «как правильно»: правила, расчёты, проверки прав, @transaction.atomic |
-| `controller/` | Views (обработчики маршрутов) | принять запрос → валидировать → отдать сервису |
-| `urls.py` | Маршруты приложения | только свои эндпоинты |
+| `choices/` | Enumerations (roles, statuses, housing types) | Enums / constants only |
+| `constants/` | Static values (filter keys, page sizes) | Constants only |
+| `dto/` | Serializers | Form validation and (de)serialization **only** |
+| `errors/` | Domain error classes | Clear error code + HTTP status |
+| `filters/` | Search, filtering, sorting | Clean ORM querying |
+| `paginations/` | Pagination | Slicing + metadata |
+| `models/` | Database models | Table descriptions + full_clean() / CheckConstraint (see section 6) |
+| `repositories/` | Database queries | **ONLY** raw queries/fetching, nothing else |
+| `services/` | Business logic | "The right way": rules, calculations, permission checks, `@transaction.atomic` |
+| `controller/` | Views (route handlers) | Accept request → validate → pass to service |
+| `urls.py` | App routes | Own endpoints only |
 
-**Поток запроса:**
+**Request Flow:**
 
 ```
-HTTP → controller → (dto: валидация) → service (бизнес-правила) → repository (БД) → ответ
+HTTP → controller → (dto: validation) → service (business rules) → repository (DB) → response
 ```
 
-Почему так: контроллер не знает про SQL, репозиторий не знает про HTTP, бизнес-правила
-лежат в одном месте и легко тестируются. Каждый слой можно менять независимо.
+Why this approach: The controller knows nothing about SQL, the repository knows nothing about HTTP, and business rules reside in a single place making them easy to test. Each layer can be modified independently.
 
-**Диаграммы проекта**
+**Project Diagrams**
 
-Диаграмма классов
-![ER-диаграмма проекта](assets/classes_CozyBooking.png)
+Class Diagram
+![Class Diagram](assets/classes_CozyBooking.png)
 
-
-Диаграмма пакетов
-![ER-диаграмма проекта](assets/packages_CozyBooking.png)
+Package Diagram
+![Package Diagram](assets/packages_CozyBooking.png)
 
 ---
 
-## 2. Быстрый старт (локально, SQLite)
+## 2. Quick Start (Local, SQLite)
 
-Для локальной разработки БД по умолчанию — SQLite (не нужен сервер PostgreSQL).
+For local development, SQLite is used by default (no PostgreSQL server required).
 
 ```bash
-# 1. Виртуальное окружение
+# 1. Virtual environment
 python -m venv .venv
 source .venv/Scripts/activate      # Windows (Git Bash)
 # source .venv/bin/activate        # Linux/macOS
 
-# 2. Зависимости
+# 2. Dependencies
 pip install -r requirements-dev.txt
 
-# 3. Файл окружения
-cp .env.example .env               # postgresql=False → SQLite
+# 3. Environment file
+cp .env.example .env               # postgresql=False -> SQLite
 
-# 4. Миграции и запуск
+# 4. Migrations and startup
 python manage.py migrate
-python manage.py createsuperuser   # по желанию, для /admin
-python manage.py fill_db           # по желанию: наполняет базу демо-данными (Faker)
+python manage.py createsuperuser   # Optional, for /admin
+python manage.py fill_db           # Optional: populates DB with demo data (Faker)
 python manage.py runserver
 ```
 
-API поднимется на `http://127.0.0.1:8000/`.
+The API will be available at `http://127.0.0.1:8000/`.
 
 ---
 
-## 3. Запуск через Docker (PostgreSQL)
+## 3. Running via Docker (PostgreSQL)
 
-Основная БД по требованиям проекта —PostgreSQL. Весь стек поднимается одной командой:
+The primary database required by the project specifications is PostgreSQL. The entire stack can be launched with a single command:
 
 ```bash
 cp .env.example .env               
 docker compose up --build
 ```
 
-Что происходит: поднимается контейнер `db` (postgres:16-alpine) со health-check'ом, затем `web` дожидается доступности БД
-(`entrypoint.sh`), применяет миграции, собирает статику и стартует через **gunicorn**.
-Compose сам выставляет `postgresql=True`, `DB_HOST=db` и `DB_PORT=5432` для веб-контейнера.
+What happens: The `db` container (`postgres:16-alpine`) starts up with a health check, then the `web` container waits for the database to become available (`entrypoint.sh`), applies migrations, collects static files, and starts via **Gunicorn**.
+Docker Compose automatically sets `postgresql=True`, `DB_HOST=db`, and `DB_PORT=5432` for the web container.
 
-### 3.1. Деплой на Render (прод)
+### 3.1. Deployment on Render (Production)
 
-Проект развёрнут на Render — веб-сервис собирается прямо из Dockerfile (используется тот же entrypoint.sh, что и в docker-compose.yml: миграции и collectstatic прогоняются автоматически при каждом старте), база — отдельный managed PostgreSQL.
+The project is deployed on Render — the web service is built directly from the `Dockerfile` (using the same `entrypoint.sh` as in `docker-compose.yml`: migrations and `collectstatic` run automatically on every startup), with a separate managed PostgreSQL database.
 
-Переменные окружения на Render (Environment → веб-сервис):
+Environment variables on Render (Environment -> Web Service):
 
-ПеременнаяЗначениеpostgresqlTrueDB_NAME / DB_USER / DB_PASSWORD / DB_HOST / DB_PORTиз блока Connections Render-базы (Internal, не External)SECRET_KEYсгенерированная случайная строкаDEBUGFalseALLOWED_HOSTS.onrender.com
-
-
-⚠️ Бесплатный тариф Render: веб-сервис засыпает после 15 минут простоя (холодный
-старт ~30–60 сек при следующем запросе), а бесплатная PostgreSQL живёт 30 дней
-с момента создания (+14 дней грейс-периода), после чего данные удаляются — при
-необходимости базу пересоздают заново (migrate + fill_db для демо-данных).
-
----
-
-## 4. Переменные окружения (`.env`)
-
-Все секреты — только в `.env` (в git не коммитится, см. `.gitignore`).
-
-| Переменная | Назначение |
+| Variable | Value |
 |---|---|
-| `SECRET_KEY` | секретный ключ Django (в проде обязателен, без дефолта) |
-| `DEBUG` | режим отладки (в проде `False`) |
-| `ALLOWED_HOSTS` | разрешённые хосты |
-| `postgresql` | `True` → PostgreSQL, `False`/не задано → SQLite (dev) |
-| `DB_NAME/USER/PASSWORD/HOST/PORT` | параметры PostgreSQL |
+| `postgresql` | `True` |
+| `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_HOST` / `DB_PORT` | From the Render database Connections block (Internal, not External) |
+| `SECRET_KEY` | Generated random string |
+| `DEBUG` | `False` |
+| `ALLOWED_HOSTS` | `.onrender.com` |
+
+⚠️ Render Free Tier note: The web service spins down after 15 minutes of inactivity (~30–60 sec cold start on the next request), and the free PostgreSQL database lives for 30 days from creation (+14 day grace period), after which data is deleted — if needed, the database can be re-created (`migrate` + `fill_db` for demo data).
 
 ---
 
-## 5. API — эндпоинты
+## 4. Environment Variables (`.env`)
 
-Базовый префикс: `/api/<version>/`, версия сейчас — `v1` (например `/api/v1/listings/`).
-Аутентификация — JWT: заголовок `Authorization: Bearer <access>`.
+All secrets must reside exclusively in `.env` (excluded from git via `.gitignore`).
 
-**Как смотреть и тестировать API (без фронтенда — это backend-проект):**
-- **Django Admin:** `http://127.0.0.1:8000/admin/` — веб-панель для данных (нужен `createsuperuser`).
-- **Postman:** коллекция лежит в `apps/common/management/commands/CozyBooking-demo.postman_collection.json`
-готовый сценарий из 18 запросов (логины сами сохраняют токены и id в переменные).
-- Готовые Swagger/OpenAPI-доки сейчас не подключены — при необходимости эндпоинты проверяются через Postman/Admin.
-
-### Пользователи (`/api/v1/users/`)
-| Метод | Путь | Доступ | Описание |
-|---|---|---|---|
-| POST | `/register/` | все | регистрация (`name`, `email`, `password`, `role`) |
-| POST | `/login/` | все | вход → `access`, `refresh`, данные пользователя |
-| POST | `/logout/` | авторизован | выход (гасит `refresh` через blacklist) |
-| POST | `/token/refresh/` | все | обновление `access` по `refresh` |
-| DELETE | `/me/` | авторизован | удалить свой аккаунт |
-
-
-### Объявления (`/api/v1/listings/`)
-| Метод | Путь | Доступ | Описание |
-|---|---|---|---|
-| GET | `/` | все | каталог с фильтрами (см. ниже) |
-| POST | `/` | арендодатель | создать объявление |
-| GET | `/<id>/` | все | карточка (фиксирует просмотр) |
-| PATCH | `/<id>/` | владелец | редактировать |
-| DELETE | `/<id>/` | владелец | удалить |
-| POST | `/<id>/availability/` | владелец | вкл/выкл видимость |
-| GET | `/my/` | арендодатель | мои объявления (в т.ч. скрытые) |
-| GET | `/popular-searches/` | все | популярные поисковые запросы |
-
-**Query-параметры каталога:** `search`, `location`, `price_min`, `price_max`,
-`rooms_min`, `rooms_max`, `housing_type`, `order` (`price`/`-price`/`created_at`/`-created_at`/`popular`/`-popular`), `page`, `page_size`.
-
-### Бронирования (`/api/v1/reservations/`)
-| Метод | Путь | Доступ | Описание |
-|---|---|---|---|
-| POST | `/` | арендатор | создать бронь (`listing`, `start_date`, `end_date`) |
-| GET | `/my/` | авторизован | мои брони (как арендатор) |
-| GET | `/lessor/` | арендодатель | брони по моим объявлениям (как арендодатель) |
-| PATCH | `/<id>/confirm/` | арендодатель |подтвердить бронь (`PENDING → CONFIRMED`)|
-| PATCH | `/<id>/check-in/` | арендодатель |отметить заселение (`CONFIRMED → CHECKED_IN`)|
-| PATCH | `/<id>/cancel/` | арендатор/арендодатель|отменить бронь|
-
-### Отзывы (`/api/v1/reviews/`)
-| Метод | Путь | Доступ | Описание |
-|---|---|---|---|
-| POST | `/` | арендатор | отзыв по своей завершённой броне |
-| GET | `/listing/<id>/` | все | все отзывы объявления |
+| Variable | Purpose |
+|---|---|
+| `SECRET_KEY` | Django secret key (mandatory in production, no default) |
+| `DEBUG` | Debug mode (`False` in production) |
+| `ALLOWED_HOSTS` | Allowed host names |
+| `postgresql` | `True` -> PostgreSQL, `False`/unset -> SQLite (dev) |
+| `DB_NAME/USER/PASSWORD/HOST/PORT` | PostgreSQL connection parameters |
 
 ---
 
-## 6. Роли и бизнес-правила
+## 5. API Endpoints
 
-**Роли:** `RENTER` (арендатор) и `LESSOR` (арендодатель). Разграничение — через
-permission-классы `IsRenter/IsLessor` (`apps/common/permissions.py`, суперпользователь
-проходит всегда) и проверку владения в сервисах.
+Base prefix: `/api/<version>/`, current version is `v1` (e.g., `/api/v1/listings/`).
+Authentication — JWT: header `Authorization: Bearer <access>`.
 
-**Бронирование — статусы:** `PENDING → CONFIRMED → CHECKED_IN`, либо `CANCELED` (из `PENDING` или `CONFIRMED`).
-Терминальные статусы (`CHECKED_IN`, `REJECTED`, `CANCELED`) переходов не имеют.
-- Пересечение дат: два интервала заняты, если `start_A < end_B AND end_A > start_B`
-(отменённые/отклонённые брони не считаются занятостью). Проверка бронируемого объявления
-делается под `select_for_update()` — нет гонки двойного бронирования.
-- Даты не в прошлом, `start_date < end_date`, нельзя бронировать своё объявление.
-- Арендатор может **отменить** свою бронь не позднее чем за 2 дня до заезда;
-  начавшуюся (`CHECKED_IN`) бронь отменить нельзя.
-- Арендодатель может `подтвердить` (`CONFIRMED)` и `отметить заселение`
-  (`CHECKED_IN`, только в дни фактического проживания).
+**How to inspect and test the API (without a frontend — this is a backend project):**
+- **Django Admin:** `http://127.0.0.1:8000/admin/` — web panel for data management (requires `createsuperuser`).
+- **Postman:** Collection located at `apps/common/management/commands/CozyBooking-demo.postman_collection.json` containing a ready-to-run scenario of 18 requests (logins automatically save tokens and IDs into variables).
+- Built-in Swagger/OpenAPI docs are not currently wired up — endpoints can be verified via Postman or Admin.
 
-**Отзыв** можно оставить только по своей броне со статусом `CHECKED_IN` и только
-один раз (проверка в сервисе + `OneToOneField` на уровне БД).
+### Users (`/api/v1/users/`)
+| Method | Path | Access | Description |
+|---|---|---|---|
+| POST | `/register/` | Public | Registration (`name`, `email`, `password`, `role`) |
+| POST | `/login/` | Public | Login -> returns `access`, `refresh`, user data |
+| POST | `/logout/` | Authenticated | Logout (blacklists `refresh` token) |
+| POST | `/token/refresh/` | Public | Refresh `access` token using `refresh` token |
+| DELETE | `/me/` | Authenticated | Delete own account |
 
-**Валидация данных:** каждая модель (`Apartment`, `Address`, `SearchHistory`,
-`Reservation`, `Review`, `User`) вызывает `full_clean()` перед сохранением —
-модель невозможно сохранить в обход `clean()`/валидаторов, даже если кто-то
-создаст объект напрямую через ORM в обход сериализатора. Дополнительно на уровне
-БД стоят `CheckConstraint` (диапазоны цен/комнат/рейтинга, порядок дат и т.п.) —
-двойная защита: на уровне Python и на уровне схемы.
+### Listings (`/api/v1/listings/`)
+| Method | Path | Access | Description |
+|---|---|---|---|
+| GET | `/` | Public | Catalog with filters (see below) |
+| POST | `/` | Lessor | Create a listing |
+| GET | `/<id>/` | Public | Listing details (records view count) |
+| PATCH | `/<id>/` | Owner | Edit listing |
+| DELETE | `/<id>/` | Owner | Delete listing |
+| POST | `/<id>/availability/` | Owner | Toggle visibility on/off |
+| GET | `/my/` | Lessor | My listings (including hidden ones) |
+| GET | `/popular-searches/` | Public | Popular search queries |
+
+**Catalog Query Parameters:** `search`, `location`, `price_min`, `price_max`, `rooms_min`, `rooms_max`, `housing_type`, `order` (`price`/`-price`/`created_at`/`-created_at`/`popular`/`-popular`), `page`, `page_size`.
+
+### Reservations (`/api/v1/reservations/`)
+| Method | Path | Access | Description |
+|---|---|---|---|
+| POST | `/` | Renter | Create reservation (`listing`, `start_date`, `end_date`) |
+| GET | `/my/` | Authenticated | My reservations (as a renter) |
+| GET | `/lessor/` | Lessor | Reservations for my listings (as a lessor) |
+| PATCH | `/<id>/confirm/` | Lessor | Confirm reservation (`PENDING -> CONFIRMED`) |
+| PATCH | `/<id>/check-in/` | Lessor | Mark as checked-in (`CONFIRMED -> CHECKED_IN`) |
+| PATCH | `/<id>/cancel/` | Renter / Lessor | Cancel reservation |
+
+### Reviews (`/api/v1/reviews/`)
+| Method | Path | Access | Description |
+|---|---|---|---|
+| POST | `/` | Renter | Leave a review for a completed reservation |
+| GET | `/listing/<id>/` | Public | All reviews for a listing |
 
 ---
 
-## 7. Тесты
-Тесты разложены по типам в `apps/tests/`:
+## 6. Roles and Business Rules
+
+**Roles:** `RENTER` and `LESSOR`. Access control is handled via permission classes `IsRenter` / `IsLessor` (`apps/common/permissions.py`, superuser always passes) and ownership checks inside services.
+
+**Reservation Statuses:** `PENDING -> CONFIRMED -> CHECKED_IN`, or `CANCELED` (from `PENDING` or `CONFIRMED`). Terminal statuses (`CHECKED_IN`, `REJECTED`, `CANCELED`) allow no further transitions.
+- Date overlapping: two intervals overlap if `start_A < end_B AND end_A > start_B` (canceled/rejected reservations do not count as occupancy). Checking listing availability is executed under `select_for_update()` to prevent double-booking race conditions.
+- Dates cannot be in the past, `start_date < end_date`, and users cannot book their own listings.
+- A renter can **cancel** their reservation no later than 2 days before check-in; an ongoing reservation (`CHECKED_IN`) cannot be canceled.
+- A lessor can `confirm` (`CONFIRMED`) and `mark check-in` (`CHECKED_IN`, only on actual dates of stay).
+
+**Reviews** can only be left for one's own reservation with the status `CHECKED_IN` and exactly once (enforced by service logic + `OneToOneField` at the database level).
+
+**Data Validation:** Every model (`Apartment`, `Address`, `SearchHistory`, `Reservation`, `Review`, `User`) invokes `full_clean()` before saving — a model cannot be saved bypassing `clean()` or validators, even if an object is created directly via the ORM bypassing the serializer. Additionally, `CheckConstraint` rules are enforced at the database level (price/room/rating ranges, date ordering, etc.) providing dual-layer protection: at the Python level and at the schema level.
+
+---
+
+## 7. Tests
+Tests are organized by type within `apps/tests/`:
 
 ```
 apps/tests/
-├── test_full_flow.py                # e2e-сценарий: регистрация → объявление → бронь → заселение → отзыв
-├── test_models.py                   # full_clean(), CheckConstraint, граничные значения моделей
-├── test_services.py                 # бизнес-правила сервисов (пересечение дат, переходы статусов и т.п.)
-├── test_filters_repositories.py     # фильтрация/сортировка/пагинация каталога
-├── test_edge_cases.py               # доп. граничные и негативные сценарии
-└── test_paginations_permissions.py  # пагинация и права доступа
+├── test_full_flow.py                # e2e scenario: registration -> listing -> reservation -> check-in -> review
+├── test_models.py                   # full_clean(), CheckConstraint, model boundary values
+├── test_services.py                 # service business rules (date overlapping, status transitions, etc.)
+├── test_filters_repositories.py     # catalog filtering / sorting / pagination
+├── test_edge_cases.py               # additional edge and negative scenarios
+└── test_paginations_permissions.py  # pagination and access permissions
 ```
 
-Запуск (изолированная тестовая БД, `--nomigrations` `--reuse-db` из `pytest.ini`):
+Execution (isolated test database, `--nomigrations` `--reuse-db` configured in `pytest.ini`):
 
 ```bash
 python manage.py test
-# или, если используется pytest:
+# or, if using pytest:
 pytest
 ```
 
 ---
 
-## 8. Безопасность
+## 8. Security
 
-Что заложено в проекте:
+Security measures implemented in the project:
 
-- **Целостность бронирований:** явная стейт-машина статусов
-  (`ALLOWED_TRANSITIONS`) — нельзя воскресить отменённую бронь или откатить
-  заселение; создание/изменение брони — под `@transaction.atomic` и
-  `select_for_update() `на объявлении — нет гонки двойного бронирования.
-- **Валидация на два уровня:** `full_clean()` в `save()` моделей + `CheckConstraint`
-  в БД (см. п.6) — данные защищены даже в обход сериализатора.
-- **Пароли:** прогон через `AUTH_PASSWORD_VALIDATORS` (длина, общеизвестные,
-  «только цифры»), хеширование `set_password` внутри `@transaction.atomic`
-  в менеджере пользователя.
-- **Троттлинг:** анонимы/пользователи ограничены по умолчанию, auth-эндпоинты
-  (`login`/`register`/`logout`/`refresh`) — жёсткий scope `5/min` против брутфорса.
-  *Примечание: при нескольких воркерах gunicorn для точного лимита нужен общий
-  кэш (Redis) — сейчас `LocMemCache` считает по воркеру.*
-- **Fail-closed конфиг:** в проде отсутствие `SECRET_KEY` роняет старт
-  (не поднимается с известным дефолтом).
-- **Прод-заголовки:** вне `DEBUG` включаются HTTPS-redirect, HSTS, secure-cookies,
-  `SECURE_PROXY_SSL_HEADER` (за gunicorn+прокси).
-- **Доступ по ролям + владению:** permission-классы + проверки в сервисах;
-  забронировать скрытое объявление нельзя; отзыв — только по своей `CHECKED_IN`-броне
-  (плюс `OneToOne` на уровне БД от дублей).
-- **Versioning API:** все маршруты идут через `URLPathVersioning` (`/api/v1/...`),
-  что позволяет добавлять `v2` без слома текущих клиентов.
+- **Reservation Integrity:** Explicit state machine for statuses (`ALLOWED_TRANSITIONS`) — you cannot resurrect a canceled reservation or roll back a check-in; reservation creation/modification runs under `@transaction.atomic` and `select_for_update()` on the listing to prevent double-booking race conditions.
+- **Two-Tier Validation:** `full_clean()` in model `save()` methods + `CheckConstraint` in the DB (see section 6) — data is protected even when bypassing serializers.
+- **Passwords:** Validated through `AUTH_PASSWORD_VALIDATORS` (length, common passwords, digit-only checks), hashed via `set_password` inside `@transaction.atomic` in the user manager.
+- **Throttling:** Anonymous and authenticated users are rate-limited by default; auth endpoints (`login`/`register`/`logout`/`refresh`) enforce a strict `5/min` scope against brute-force attacks. _Note: with multiple Gunicorn workers, precise limiting requires a shared cache (Redis) — currently `LocMemCache` tracks per worker._
+- **Fail-Closed Configuration:** In production, missing `SECRET_KEY` crashes startup (does not boot with a known default).
+- **Production Headers:** Outside `DEBUG`, HTTPS redirect, HSTS, secure cookies, and `SECURE_PROXY_SSL_HEADER` are enabled (behind Gunicorn + proxy).
+- **Role-Based & Ownership Access:** Permission classes combined with service-level checks; hidden listings cannot be booked; reviews require a personal `CHECKED_IN` reservation (plus database-level `OneToOne` against duplicates).
+- **API Versioning:** All routes go through `URLPathVersioning` (`/api/v1/...`), allowing the introduction of `v2` without breaking existing clients.
 
 ---
 
-## 9. Git-фильтр: комментарии остаются только локально
-
-В проекте настроен `clean`-фильтр Git, который перед коммитом прогоняет
-`*.py`-файлы через `strip_comments.py` и вырезает комментарии/докстроки —
-наружу (в GitHub) уходит код без них, а на диске разработчика они остаются
-нетронутыми (`smudge` — просто `cat`, без изменений при чтении).
-
-Настройка (один раз после клонирования, PowerShell):
-```powershell
-./setup_filter.ps1
-```
-Скрипт пропишет `filter.stripcomments.clean/smudge` в локальном `git config`
-и переприменит фильтр (`git add --renormalize .`) к уже отслеживаемым файлам.
-Дальше — обычный `git add` / `git commit` / `git push`.
-
-Проверить, что реально уйдёт в GitHub из конкретного файла:
-```bash
-git show :apps/listings/models/apartment.py
-```
-_⚠️ Фильтр настраивается локально для каждого клона (это git-конфиг, не
-часть репозитория) и работает только через `clean`, т.к. `smudge = cat`.
-Из-за этого при переключении веток файлы с уже закоммиченными (очищенными)
-версиями могут перезаписать локальные комментарии — если это уже случилось,
-комментарии восстанавливаются заново._
-
----
-
-## 10. Наполнение БД демо-данными
+## 9. Populating the DB with Demo Data
 ```bash
 python manage.py fill_db
 ```
-Команда (`apps/common/management/commands/fill_db.py`) через `Faker` создаёт
-пользователей обеих ролей, объявления с адресами и часть бронирований —
-удобно для ручного тестирования API без ввода данных вручную.
+The command (`apps/common/management/commands/fill_db.py`) uses `Faker` to generate users of both roles, listings with addresses, and a set of reservations — making manual API testing convenient without manual data entry.
 
-## Схема базы данных (ER-диаграмма)
+## Database Schema (ER Diagram)
 
-Ниже представлена структура данных проекта:
+The project data structure is illustrated below:
 
-![ER-диаграмма проекта](assets/django_schema.png)
-
-
-
-
-
-
-
-
-
-
-
-
+![Database ER Diagram](assets/django_schema.png)

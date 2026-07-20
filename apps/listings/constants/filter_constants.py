@@ -1,3 +1,9 @@
+"""Constants for search, filtering, and pagination parameters.
+
+This module defines query parameter constants and configuration limits
+for filtering, ordering, and paginating listings.
+"""
+
 SEARCH = "search"
 
 LOCATION = "location"
