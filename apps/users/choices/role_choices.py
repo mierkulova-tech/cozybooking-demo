@@ -1,7 +1,10 @@
+"""Role choices for user accounts."""
+
 from django.db import models
 
 
 class RoleChoices(models.TextChoices):
-    RENTER = "RENTER", "Арендатор"
+    """Available user roles in the system."""
 
-    LESSOR = "LESSOR", "Арендодатель"
+    RENTER = "RENTER", "Renter"
+    LESSOR = "LESSOR", "Lessor"

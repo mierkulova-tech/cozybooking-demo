@@ -1,3 +1,5 @@
+"""Reservation model representing a booking of an apartment for a date range."""
+
 from decimal import Decimal
 
 from django.conf import settings
@@ -12,6 +14,8 @@ from apps.reservations.choices.status_choices import StatusChoices
 
 
 class Reservation(BaseModel):
+    """A booking made by a renter for an apartment over a date range."""
+
     listing = models.ForeignKey(
         "listings.Apartment",
         on_delete=models.PROTECT,
@@ -26,9 +30,7 @@ class Reservation(BaseModel):
     price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        validators=[
-            MinValueValidator(Decimal("0.01"), message="Цена должна быть больше нуля.")
-        ],
+        validators=[MinValueValidator(Decimal("0.01"), message="Price must be greater than zero.")],
     )
 
     start_date = models.DateField()
@@ -42,6 +44,8 @@ class Reservation(BaseModel):
     )
 
     class Meta:
+        """Database table, indexes, and constraints for Reservation."""
+
         db_table = "reservations"
 
         ordering = ["-created_at"]
@@ -67,47 +71,41 @@ class Reservation(BaseModel):
         ]
 
     def clean(self):
+        """Validate date range, ownership, and booking-window business rules.
+
+        Raises:
+            ValidationError: If end_date is not after start_date, if the user
+                tries to book their own listing, if start_date is moved into
+                the past, or if start_date is more than a year in the future.
+        """
         super().clean()
 
         current_date = timezone.now().date()
 
         if self.start_date and self.end_date:
             if self.start_date >= self.end_date:
-                raise ValidationError(
-                    {
-                        "end_date": "Дата окончания бронирования должна быть позже даты начала."
-                    }
-                )
+                raise ValidationError({"end_date": "End date must be later than the start date."})
 
         if self.user_id and self.listing_id:
             if self.listing.owner_id == self.user_id:
-                raise ValidationError(
-                    {"user": "Вы не можете забронировать свое собственное жилье."}
-                )
+                raise ValidationError({"user": "You cannot book your own listing."})
 
         if not self.pk:
             if self.start_date and self.start_date < current_date:
-                raise ValidationError(
-                    {"start_date": "Нельзя создать бронирование в прошлом."}
-                )
+                raise ValidationError({"start_date": "Cannot create a reservation in the past."})
         else:
             original = Reservation.objects.get(pk=self.pk)
-            if (
-                original.start_date != self.start_date
-                and self.start_date < current_date
-            ):
-                raise ValidationError(
-                    {"start_date": "Нельзя перенести бронирование на дату в прошлом."}
-                )
+            if original.start_date != self.start_date and self.start_date < current_date:
+                raise ValidationError({"start_date": "Cannot move a reservation to a past date."})
 
         if self.start_date and (self.start_date - current_date).days > 365:
-            raise ValidationError(
-                {"start_date": "Бронирование возможно максимум на 1 год вперёд."}
-            )
+            raise ValidationError({"start_date": "Reservations can be made at most 1 year ahead."})
 
     def save(self, *args, **kwargs):
+        """Run full validation before saving."""
         self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
+        """Return a short label showing the reservation id, listing, and status."""
         return f"Reservation #{self.id} listing={self.listing_id} [{self.status}]"

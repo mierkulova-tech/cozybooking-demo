@@ -63,9 +63,7 @@ class Migration(migrations.Migration):
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 (
                     "land",
-                    models.CharField(
-                        help_text="Федеральная земля (Bundesland)", max_length=100
-                    ),
+                    models.CharField(help_text="Федеральная земля (Bundesland)", max_length=100),
                 ),
                 ("city", models.CharField(max_length=100)),
                 ("street", models.CharField(blank=True, max_length=255)),

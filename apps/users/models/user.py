@@ -1,3 +1,5 @@
+"""Custom user model with email-based authentication and role support."""
+
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 
@@ -7,6 +9,8 @@ from apps.users.models.managers import UserManager
 
 
 class User(AbstractBaseUser, PermissionsMixin, BaseModel):
+    """Custom user model authenticated by email, with a renter/lessor role."""
+
     name = models.CharField(max_length=150)
 
     email = models.EmailField(unique=True, max_length=254)
@@ -26,6 +30,8 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     REQUIRED_FIELDS = ["name"]
 
     class Meta:
+        """Database table name and integrity constraints for User."""
+
         db_table = "users"
 
         constraints = [
@@ -40,15 +46,23 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
         ]
 
     def clean(self):
+        """Normalize the email address to lowercase before validation."""
         super().clean()
         if self.email:
             self.email = self.email.lower()
 
     def anonymize(self) -> None:
-        self.name = "Удалённый пользователь"
+        """Scrub personally identifiable information for GDPR-compliant deletion.
+
+        Replaces the name and email with placeholder values, disables the
+        password, and deactivates the account while preserving the row
+        (and its foreign key relations) for referential integrity.
+        """
+        self.name = "Deleted user"
         self.email = f"deleted-{self.id}@deleted.local"
         self.set_unusable_password()
         self.is_active = False
 
     def __str__(self):
+        """Return a human-readable representation showing email and role."""
         return f"{self.email} ({self.role})"

@@ -1,3 +1,9 @@
+"""Main application URL routing configuration for cozybooking project.
+
+The `urlpatterns` list routes URLs to app-specific URL modules. For more information please see:
+    https://docs.djangoproject.com/en/stable/topics/http/urls/
+"""
+
 from django.urls import include, path
 
 urlpatterns = [

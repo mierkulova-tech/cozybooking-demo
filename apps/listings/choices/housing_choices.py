@@ -1,11 +1,12 @@
+"""Housing type choices for apartment listings."""
+
 from django.db import models
 
 
 class HousingTypeChoices(models.TextChoices):
-    APARTMENT = "APARTMENT", "Квартира"
+    """Available housing types for apartments."""
 
-    HOUSE = "HOUSE", "Дом"
-
-    STUDIO = "STUDIO", "Студия"
-
-    ROOM = "ROOM", "Комната"
+    APARTMENT = "APARTMENT", "Apartment"
+    HOUSE = "HOUSE", "House"
+    STUDIO = "STUDIO", "Studio"
+    ROOM = "ROOM", "Room"

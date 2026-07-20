@@ -95,9 +95,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="apartment",
             constraint=models.CheckConstraint(
-                condition=models.Q(
-                    ("housing_type__in", ["APARTMENT", "HOUSE", "STUDIO", "ROOM"])
-                ),
+                condition=models.Q(("housing_type__in", ["APARTMENT", "HOUSE", "STUDIO", "ROOM"])),
                 name="apartment_housing_type_valid",
             ),
         ),

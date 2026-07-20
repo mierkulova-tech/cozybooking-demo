@@ -1,3 +1,10 @@
+"""URL routing configuration for the reservations application.
+
+This module defines URL patterns for creating reservations, listing renter and
+lessor reservations, and handling status lifecycle actions like confirmation,
+check-in, and cancellation.
+"""
+
 from django.urls import path
 
 from apps.reservations.controller.reservation_controllers import (

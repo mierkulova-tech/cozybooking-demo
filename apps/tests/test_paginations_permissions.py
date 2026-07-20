@@ -1,90 +1,168 @@
-import pytest
-from rest_framework.test import APIClient
+from datetime import timedelta
 
-from apps.common.permissions import IsLessor, IsRenter
-from apps.listings.paginations.paginator import Paginator
+import pytest
+from django.utils import timezone
+
+from apps.listings.services.apartment_service import ApartmentService
+from apps.reservations.services.reservation_service import ReservationService
+from apps.reviews.services.review_service import ReviewService
+from apps.users.services.user_service import UserService
 
 
 @pytest.mark.django_db
-class TestPaginationsAndPermissions:
-    @pytest.fixture
-    def client(self):
-        return APIClient()
+class TestBusinessLogic:
+    """Test suite validating core business logic,
+    services, domain operations, and constraint rules.
+    """
 
     @pytest.fixture
     def user_lessor(self):
+        """Fixture providing a lessor user for service-level testing."""
         from apps.users.models import User
 
         return User.objects.create_user(
             name="Lessor",
             email="lessor@test.com",
-            password="StrongPass123!",
+            password="StrongPass123",
             role="LESSOR",
         )
 
     @pytest.fixture
     def user_renter(self):
+        """Fixture providing a renter user for service-level testing."""
         from apps.users.models import User
 
         return User.objects.create_user(
             name="Renter",
             email="renter@test.com",
-            password="StrongPass123!",
+            password="StrongPass123",
             role="RENTER",
         )
 
     @pytest.fixture
-    def apartments(self, user_lessor):
+    def apartment(self, user_lessor):
+        """Fixture providing a test apartment listing created via database setup."""
         from apps.listings.models import Address, Apartment
 
-        addr = Address.objects.create(
-            land="Bayern", city="München", street="Test", postal_code="80331"
+        address = Address.objects.create(
+            land="Bayern", city="München", street="Test 1", postal_code="80331"
         )
-        for i in range(12):
-            Apartment.objects.create(
-                owner=user_lessor,
-                address=addr,
-                title=f"Apartment {i}",
-                description="Хорошее описание для прохождения валидации.",
-                price=1000 + i * 50,
-                rooms=1 + (i % 3),
-                housing_type="STUDIO",
-                is_active=True,
+        return Apartment.objects.create(
+            owner=user_lessor,
+            address=address,
+            title="Test Apt",
+            description=(
+                "Spacious bright studio with modern renovation, "
+                "kitchen, bathroom, and balcony. Fully furnished, Wi-Fi, washing machine."
+            ),
+            price=1000,
+            rooms=2,
+            housing_type="STUDIO",
+            is_active=True,
+        )
+
+    def test_user_service_register(self):
+        """Verify that UserService successfully registers a
+        new user and assigns attributes correctly.
+        """
+        service = UserService()
+        user = service.register(
+            name="New User",
+            email="new@test.com",
+            password="StrongPass123!",
+            role="RENTER",
+        )
+        assert user.email == "new@test.com"
+        assert user.role == "RENTER"
+
+    def test_user_service_duplicate_email(self):
+        """Ensure that registering two users with the same
+        email address raises an exception.
+        """
+        service = UserService()
+        service.register("Test", "dup@test.com", "Pass123!", "RENTER")
+        with pytest.raises(Exception):
+            service.register("Dup", "dup@test.com", "Pass123!", "RENTER")
+
+    def test_apartment_service_create(self, user_lessor):
+        """Verify that ApartmentService correctly handles new
+        listing creation for a lessor.
+        """
+        service = ApartmentService()
+        data = {
+            "title": "New Listing",
+            "description": (
+                "Spacious bright studio with modern renovation, "
+                "kitchen, bathroom, and balcony. Fully furnished."
+            ),
+            "price": 1200,
+            "rooms": 2,
+            "housing_type": "STUDIO",
+            "address": {
+                "land": "Test",
+                "city": "City",
+                "street": "Str",
+                "postal_code": "12345",
+            },
+        }
+        apartment = service.create_listing(user_lessor, data)
+        assert apartment.title == "New Listing"
+        assert apartment.owner == user_lessor
+
+    def test_reservation_service_overlapping_dates(self, apartment, user_renter):
+        """Ensure that overlapping reservation dates for the same
+        listing are rejected by the service layer.
+        """
+        service = ReservationService()
+        start = timezone.now().date() + timedelta(days=10)
+        end = start + timedelta(days=5)
+
+        service.create_reservation(
+            user_renter,
+            {
+                "listing": apartment,
+                "start_date": start,
+                "end_date": end,
+            },
+        )
+
+        with pytest.raises(Exception):
+            service.create_reservation(
+                user_renter,
+                {
+                    "listing": apartment,
+                    "start_date": start + timedelta(days=3),
+                    "end_date": end + timedelta(days=3),
+                },
             )
-        return Apartment.objects.all()
 
-    def test_listing_pagination(self, apartments):
-        paginator = Paginator()
-        result = paginator.paginate(apartments, page=1, page_size=5)
+    def test_reservation_service_past_dates(self, apartment, user_renter):
+        """Verify that creating a reservation with
+        dates in the past is rejected.
+        """
+        service = ReservationService()
+        with pytest.raises(Exception):
+            service.create_reservation(
+                user_renter,
+                {
+                    "listing": apartment,
+                    "start_date": timezone.now().date() - timedelta(days=1),
+                    "end_date": timezone.now().date() + timedelta(days=1),
+                },
+            )
 
-        assert len(result["items"]) == 5
-        assert result["page"] == 1
-        assert result["page_size"] == 5
-        assert result["total"] == 12
+    def test_review_service_only_after_checkin(self, apartment, user_renter):
+        """Ensure that review submission is blocked if check-in or
+        valid reservation requirements are unmet.
+        """
+        service = ReviewService()
 
-    def test_listing_pagination_max_size(self, apartments):
-        paginator = Paginator()
-        result = paginator.paginate(apartments, page=1, page_size=100)
-        assert result["page_size"] <= 50
-
-    def test_is_lessor_permission(self, client, user_lessor):
-        permission = IsLessor()
-        request = client.request()
-        request.user = user_lessor
-        assert permission.has_permission(request, None) is True
-
-    def test_is_renter_permission(self, client, user_renter):
-        permission = IsRenter()
-        request = client.request()
-        request.user = user_renter
-        assert permission.has_permission(request, None) is True
-
-    def test_anonymous_user_permission_denied(self, client):
-        permission = IsLessor()
-        request = client.request()
-        request.user = None
-        assert permission.has_permission(request, None) is False
-
-    def test_lessor_can_create_listing(self, client, user_lessor):
-        client.force_authenticate(user=user_lessor)
-        pass
+        with pytest.raises(Exception):
+            service.create_review(
+                user_renter,
+                {
+                    "reservation": 999,
+                    "rating": 5,
+                    "comment": "Test",
+                },
+            )

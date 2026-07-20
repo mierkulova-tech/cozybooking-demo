@@ -1,3 +1,5 @@
+"""Address model representing the location of a listed apartment."""
+
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
@@ -7,7 +9,9 @@ from apps.common.models.base import BaseModel
 
 
 class Address(BaseModel):
-    land = models.CharField(max_length=100, help_text="Федеральная земля (Bundesland)")
+    """A physical address (federal state, city, street, postal code)."""
+
+    land = models.CharField(max_length=100, help_text="Federal state (Bundesland)")
 
     city = models.CharField(max_length=100)
 
@@ -16,12 +20,12 @@ class Address(BaseModel):
     postal_code = models.CharField(
         max_length=10,
         blank=True,
-        validators=[
-            RegexValidator(regex=r"^\d{4,10}$", message="Некорректный почтовый индекс.")
-        ],
+        validators=[RegexValidator(regex=r"^\d{4,10}$", message="Invalid postal code.")],
     )
 
     class Meta:
+        """Database table, indexes, and constraints for Address."""
+
         db_table = "addresses"
 
         indexes = [
@@ -41,6 +45,7 @@ class Address(BaseModel):
         ]
 
     def clean(self):
+        """Strip whitespace from city/land and require both to be present."""
         if self.city:
             self.city = self.city.strip()
 
@@ -48,14 +53,16 @@ class Address(BaseModel):
             self.land = self.land.strip()
 
         if not self.city:
-            raise ValidationError({"city": "Город обязателен."})
+            raise ValidationError({"city": "City is required."})
 
         if not self.land:
-            raise ValidationError({"land": "Федеральная земля обязательна."})
+            raise ValidationError({"land": "Federal state is required."})
 
     def save(self, *args, **kwargs):
+        """Run full validation before saving."""
         self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
+        """Return the postal code, city, and federal state as a single line."""
         return f"{self.postal_code} {self.city}, {self.land}".strip()

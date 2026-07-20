@@ -1,3 +1,5 @@
+"""API views for registration, login/logout, token refresh, and account deletion."""
+
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -13,26 +15,31 @@ from apps.users.services.user_service import UserService
 
 
 class _RefreshInputSerializer(serializers.Serializer):
+    """Input schema for endpoints that accept a raw refresh token."""
+
     refresh = serializers.CharField()
 
 
 class RegisterController(APIView):
+    """Register a new user account."""
+
     permission_classes = [AllowAny]
     throttle_scope = "auth"
 
     @extend_schema(
         tags=["Users"],
-        summary="Регистрация пользователя",
-        description="Создает нового пользователя (арендатора или арендодателя).",
+        summary="Register a user",
+        description="Creates a new user (renter or lessor).",
         request=RegisterSerializer,
         responses={
             201: UserResponseSerializer,
             400: OpenApiResponse(
-                description="Ошибка валидации (email уже существует, слабый пароль и т.д.)"
+                description="Validation error (email already exists, weak password, etc.)"
             ),
         },
     )
     def post(self, request, *args, **kwargs):
+        """Validate registration input and create the new user account."""
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -49,33 +56,38 @@ class RegisterController(APIView):
 
 @extend_schema(
     tags=["Users"],
-    summary="Вход в систему (Login)",
-    description="Аутентификация пользователя и получение пары JWT токенов (access + refresh).",
+    summary="Log in",
+    description="Authenticates the user and returns a JWT pair (access + refresh).",
     responses={200: CustomTokenObtainPairSerializer},
 )
 class LoginController(TokenObtainPairView):
+    """Authenticate a user and issue a JWT access/refresh token pair."""
+
     permission_classes = [AllowAny]
     serializer_class = CustomTokenObtainPairSerializer
     throttle_scope = "auth"
 
 
 class LogoutController(APIView):
+    """Log out the current user by blacklisting their refresh token."""
+
     permission_classes = [IsAuthenticated]
     throttle_scope = "auth"
 
     @extend_schema(
         tags=["Users"],
-        summary="Выход из системы (Logout)",
-        description="Погашает refresh token через blacklist.",
+        summary="Log out",
+        description="Invalidates the refresh token via the blacklist.",
         request=_RefreshInputSerializer,
         responses={
-            205: OpenApiResponse(description="Успешный выход"),
+            205: OpenApiResponse(description="Logged out successfully"),
             400: OpenApiResponse(
-                description="Нужен refresh token или токен недействителен"
+                description="A refresh token is required, or the token is invalid"
             ),
         },
     )
     def post(self, request, *args, **kwargs):
+        """Blacklist the provided refresh token to end the user's session."""
         refresh = request.data.get("refresh")
 
         if not refresh:
@@ -83,7 +95,7 @@ class LogoutController(APIView):
                 {
                     "error": {
                         "code": "refresh_required",
-                        "detail": "Нужен refresh-токен.",
+                        "detail": "A refresh token is required.",
                     }
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -96,7 +108,7 @@ class LogoutController(APIView):
                 {
                     "error": {
                         "code": "invalid_token",
-                        "detail": "Токен недействителен или уже погашен.",
+                        "detail": "The token is invalid or has already been blacklisted.",
                     }
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -107,25 +119,28 @@ class LogoutController(APIView):
 
 @extend_schema(
     tags=["Users"],
-    summary="Обновление access токена",
-    description="Получение нового access token по валидному refresh token.",
+    summary="Refresh access token",
+    description="Obtain a new access token using a valid refresh token.",
 )
 class RefreshController(TokenRefreshView):
+    """Issue a new access token from a valid refresh token."""
+
     throttle_scope = "auth"
 
 
 class DeleteAccountController(APIView):
+    """Delete (anonymize and deactivate) the requesting user's account."""
+
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
         tags=["Users"],
-        summary="Удаление аккаунта",
-        description="Анонимизирует данные пользователя и деактивирует аккаунт.",
-        responses={
-            204: OpenApiResponse(description="Аккаунт успешно удалён (анонимизирован)")
-        },
+        summary="Delete account",
+        description="Anonymizes the user's data and deactivates the account.",
+        responses={204: OpenApiResponse(description="Account successfully deleted (anonymized)")},
     )
     def delete(self, request, *args, **kwargs):
+        """Anonymize and deactivate the requesting user's account."""
         service = UserService()
         service.delete_account(request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)

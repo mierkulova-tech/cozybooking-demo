@@ -1,13 +1,13 @@
+"""Status choices for reservations."""
+
 from django.db import models
 
 
 class StatusChoices(models.TextChoices):
-    PENDING = "PENDING", "Ожидает подтверждения"
+    """Available reservation lifecycle statuses."""
 
-    CONFIRMED = "CONFIRMED", "Подтверждено"
-
-    REJECTED = "REJECTED", "Отклонено"
-
-    CHECKED_IN = "CHECKED_IN", "Заселение состоялось"
-
-    CANCELED = "CANCELED", "Отменено"
+    PENDING = "PENDING", "Pending"
+    CONFIRMED = "CONFIRMED", "Confirmed"
+    REJECTED = "REJECTED", "Rejected"
+    CHECKED_IN = "CHECKED_IN", "Checked in"
+    CANCELED = "CANCELED", "Canceled"

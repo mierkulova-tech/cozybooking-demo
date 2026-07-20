@@ -23,9 +23,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="reservation",
-            index=models.Index(
-                fields=["listing", "status"], name="reservation_listing_525fd0_idx"
-            ),
+            index=models.Index(fields=["listing", "status"], name="reservation_listing_525fd0_idx"),
         ),
         migrations.AddIndex(
             model_name="reservation",

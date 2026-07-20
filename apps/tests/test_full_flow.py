@@ -1,3 +1,9 @@
+"""Integration test suite for the cozybooking-demo full user journey and edge cases.
+
+This module validates end-to-end flows including user registration, authentication,
+listing management, reservation workflows, reviews, and permission rules.
+"""
+
 from datetime import timedelta
 
 import pytest
@@ -11,13 +17,17 @@ from apps.reservations.models import Reservation
 
 @pytest.mark.django_db
 class TestCozyBookingFullFlow:
+    """Test suite executing comprehensive end-to-end integration flows and API validations."""
+
     @pytest.fixture(autouse=True)
     def setup(self, api_client):
+        """Set up test client, baseline date, and clear cache before each test."""
         self.client = api_client
         self.today = timezone.now().date()
         cache.clear()
 
-    def _register(self, email: str, role: str, name: str = "Тест"):
+    def _register(self, email: str, role: str, name: str = "Test"):
+        """Helper to register a new user via API."""
         return self.client.post(
             "/api/v1/users/register/",
             {
@@ -30,6 +40,7 @@ class TestCozyBookingFullFlow:
         )
 
     def _login(self, email: str):
+        """Helper to authenticate a user and retrieve the access token."""
         resp = self.client.post(
             "/api/v1/users/login/",
             {"email": email, "password": "StrongPass123!"},
@@ -38,18 +49,23 @@ class TestCozyBookingFullFlow:
         return resp.data.get("access")
 
     def _auth(self, token: str):
+        """Helper to set authorization credentials on the test client."""
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
     def _logout(self):
+        """Helper to clear authorization credentials."""
         self.client.credentials()
 
     def _create_listing(self, token: str):
+        """Helper to create a test apartment listing as a lessor."""
         self._auth(token)
         resp = self.client.post(
             "/api/v1/listings/",
             {
-                "title": "Уютная студия в центре",
-                "description": "Светлая студия рядом с метро, все красиво и уютно, всем нравиться",
+                "title": "Cozy studio in the center",
+                "description": (
+                    "Bright studio near the metro, everything is nice and cozy, everyone likes it"
+                ),
                 "price": "850.00",
                 "rooms": 1,
                 "housing_type": "STUDIO",
@@ -65,14 +81,11 @@ class TestCozyBookingFullFlow:
         return resp
 
     def test_full_happy_path(self):
-        assert (
-            self._register("lessor@test.de", "LESSOR").status_code
-            == status.HTTP_201_CREATED
-        )
-        assert (
-            self._register("renter@test.de", "RENTER").status_code
-            == status.HTTP_201_CREATED
-        )
+        """Verify the complete user journey from registration
+        and listing creation to booking and review.
+        """
+        assert self._register("lessor@test.de", "LESSOR").status_code == status.HTTP_201_CREATED
+        assert self._register("renter@test.de", "RENTER").status_code == status.HTTP_201_CREATED
 
         lessor_token = self._login("lessor@test.de")
         renter_token = self._login("renter@test.de")
@@ -126,7 +139,7 @@ class TestCozyBookingFullFlow:
             {
                 "reservation": reservation_id,
                 "rating": 5,
-                "comment": "Всё отлично!",
+                "comment": "Everything is great!",
             },
             format="json",
         )
@@ -138,12 +151,18 @@ class TestCozyBookingFullFlow:
         assert len(reviews.data) == 1
 
     def test_renter_cannot_create_listing(self):
+        """Ensure that users with the RENTER role
+        are forbidden from creating listings
+        """
         self._register("r2@test.de", "RENTER")
         self._auth(self._login("r2@test.de"))
         resp = self.client.post("/api/v1/listings/", {}, format="json")
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
     def test_overlapping_booking_rejected(self):
+        """Verify that overlapping reservation dates
+        for the same listing are rejected.
+        """
         self._register("l3@test.de", "LESSOR")
         self._register("r3@test.de", "RENTER")
         lessor_token = self._login("l3@test.de")
@@ -172,6 +191,9 @@ class TestCozyBookingFullFlow:
         assert second.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_cannot_book_in_past(self):
+        """Ensure that creating a reservation with
+        start dates in the past is rejected.
+        """
         self._register("l4@test.de", "LESSOR")
         self._register("r4@test.de", "RENTER")
         listing_id = self._create_listing(self._login("l4@test.de")).data["id"]
@@ -189,6 +211,9 @@ class TestCozyBookingFullFlow:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_review_requires_checked_in(self):
+        """Verify that submitting a review for a
+        reservation without check-in is rejected.
+        """
         self._register("l5@test.de", "LESSOR")
         self._register("r5@test.de", "RENTER")
         lessor_token = self._login("l5@test.de")
@@ -209,12 +234,15 @@ class TestCozyBookingFullFlow:
 
         resp = self.client.post(
             "/api/v1/reviews/",
-            {"reservation": reservation_id, "rating": 4, "comment": "рано"},
+            {"reservation": reservation_id, "rating": 4, "comment": "too early"},
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_cannot_resurrect_canceled_reservation(self):
+        """Ensure that a canceled reservation
+        cannot be confirmed or resurrected.
+        """
         self._register("l6@test.de", "LESSOR")
         self._register("r6@test.de", "RENTER")
         lessor_token = self._login("l6@test.de")
@@ -250,6 +278,7 @@ class TestCozyBookingFullFlow:
         assert resurrect.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_cannot_book_inactive_listing(self):
+        """Verify that booking an inactive or toggled-off listing is rejected."""
         self._register("l7@test.de", "LESSOR")
         self._register("r7@test.de", "RENTER")
         lessor_token = self._login("l7@test.de")
@@ -273,6 +302,7 @@ class TestCozyBookingFullFlow:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_weak_password_rejected(self):
+        """Ensure that user registration with a weak password fails validation."""
         resp = self.client.post(
             "/api/v1/users/register/",
             {

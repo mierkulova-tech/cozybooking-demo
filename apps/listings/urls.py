@@ -1,3 +1,10 @@
+"""URL routing configuration for the listings application.
+
+This module defines the URL patterns for apartment listing management,
+including catalog listing, creation, details, ownership endpoints, availability toggles,
+and popular search analytics.
+"""
+
 from django.urls import path
 
 from apps.listings.controller.apartment_controllers import (

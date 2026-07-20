@@ -1,8 +1,7 @@
 {
   "info": {
     "name": "CozyBooking API v1",
-    "description": "Актуальная Postman-коллекция для CozyBooking (июль 2026).\n\nПорядок:\n1. Auth (register + login)\n2. Listings (create + catalog)\n3. Reservations\n4. Reviews\n\nbase_url = http://127.0.0.1:8000\nversion = v1",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "description": "Current Postman collection for CozyBooking (July 2026).\n\nOrder:\n1. Auth (register + login)\n2. Listings (create + catalog)\n3. Reservations\n4. Reviews\n\nbase_url = http://127.0.0.1:8000\nversion = v1",    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
@@ -112,7 +111,7 @@
             "url": "{{base_url}}/api/{{version}}/listings/",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Modern Studio\",\n  \"description\": \"Cozy place\",\n  \"price\": 1200,\n  \"rooms\": 2,\n  \"housing_type\": \"STUDIO\",\n  \"address\": {\n    \"land\": \"Steiermark\",\n    \"city\": \"Graz\",\n    \"street\": \"Georgigasse 87\",\n    \"postal_code\": \"8020\"\n  }\n}"
+              "raw": "{\n  \"title\": \"Modern Studio\",\n  \"description\": \"Cozy place\",\n  \"price\": 1200,\n  \"rooms\": 2,\n  \"housing_type\": \"STUDIO\",\n  \"address\": {\n    \"land\": \"Berlin\",\n    \"city\": \"Berlin\",\n    \"street\": \"Unter den Linden 1\",\n    \"postal_code\": \"10117\"\n  }\n}"
             }
           }
         },
