@@ -82,6 +82,23 @@ class ReservationService:
                 raise error_class(message)
             raise error_class()
 
+    def _ensure_lessor_can_set_status(self, new_status):
+        """Verify that a lessor is allowed to move a reservation to new_status.
+
+        Acts as a defense-in-depth guard on top of ALLOWED_TRANSITIONS: even
+        if a future caller passes an unexpected status, a lessor can never
+        set a reservation to anything outside LESSOR_ALLOWED_STATUSES.
+
+        Args:
+            new_status: The status a lessor is attempting to set.
+
+        Raises:
+            ReservationPermissionDeniedError: If new_status is not one of
+                the statuses a lessor is permitted to set.
+        """
+        if new_status not in LESSOR_ALLOWED_STATUSES:
+            raise ReservationPermissionDeniedError()
+
     @transaction.atomic
     def create_reservation(self, user, validated_data: dict) -> Reservation:
         """Create a reservation after validating dates, ownership, and availability.
@@ -138,13 +155,33 @@ class ReservationService:
 
     @transaction.atomic
     def confirm_reservation(self, user, reservation_id: int) -> Reservation:
-        """Confirm a pending reservation (lessor action)."""
-        reservation = self.repository.get_by_id(reservation_id)
+        """Confirm a pending reservation (lessor action).
+
+        Locks the reservation row for the duration of the transaction to
+        prevent a race condition with a concurrent status change on the
+        same reservation.
+
+        Args:
+            user: The user requesting the confirmation (must own the listing).
+            reservation_id: The id of the reservation to confirm.
+
+        Returns:
+            The updated Reservation instance.
+
+        Raises:
+            NoContentError: If the reservation does not exist.
+            ReservationPermissionDeniedError: If the user does not own the
+                listing, or CONFIRMED is not a status a lessor may set.
+            InvalidStatusTransitionError: If the reservation's current status
+                cannot transition to CONFIRMED.
+        """
+        reservation = self.repository.get_by_id_for_update(reservation_id)
         check_content_helper(reservation)
 
         if reservation.listing.owner_id != user.id:
             raise ReservationPermissionDeniedError()
 
+        self._ensure_lessor_can_set_status(StatusChoices.CONFIRMED)
         self._ensure_transition_allowed(reservation.status, StatusChoices.CONFIRMED)
 
         reservation.status = StatusChoices.CONFIRMED
@@ -152,28 +189,70 @@ class ReservationService:
 
     @transaction.atomic
     def check_in_reservation(self, user, reservation_id: int) -> Reservation:
-        """Mark a reservation as checked-in."""
-        reservation = self.repository.get_by_id(reservation_id)
+        """Mark a reservation as checked-in (lessor action).
+
+        Locks the reservation row for the duration of the transaction to
+        prevent a race condition with a concurrent status change on the
+        same reservation. Check-in is only allowed while today's date falls
+        within the reservation's stay window.
+
+        Args:
+            user: The user requesting the check-in (must own the listing).
+            reservation_id: The id of the reservation to check in.
+
+        Returns:
+            The updated Reservation instance.
+
+        Raises:
+            NoContentError: If the reservation does not exist.
+            ReservationPermissionDeniedError: If the user does not own the
+                listing, or CHECKED_IN is not a status a lessor may set.
+            InvalidStatusTransitionError: If the reservation's current status
+                cannot transition to CHECKED_IN, or if today is outside the
+                reservation's stay window.
+        """
+        reservation = self.repository.get_by_id_for_update(reservation_id)
         check_content_helper(reservation)
 
         if reservation.listing.owner_id != user.id:
             raise ReservationPermissionDeniedError()
 
+        self._ensure_lessor_can_set_status(StatusChoices.CHECKED_IN)
         self._ensure_transition_allowed(reservation.status, StatusChoices.CHECKED_IN)
 
         today = timezone.now().date()
         if not (reservation.start_date <= today <= reservation.end_date):
-            raise InvalidStatusTransitionError(
-                detail="Check-in is only possible during the stay dates."
-            )
+            raise InvalidStatusTransitionError("Check-in is only possible during the stay dates.")
 
         reservation.status = StatusChoices.CHECKED_IN
         return self.repository.save(reservation)
 
     @transaction.atomic
     def cancel_reservation(self, user, reservation_id: int) -> Reservation:
-        """Cancel a reservation adhering to time and status rules."""
-        reservation = self.repository.get_by_id(reservation_id)
+        """Cancel a reservation adhering to time and status rules.
+
+        Locks the reservation row for the duration of the transaction to
+        prevent a race condition with a concurrent status change on the
+        same reservation. A renter may only cancel up to CANCEL_DEADLINE_DAYS
+        before check-in; a lessor may cancel at any point before CHECKED_IN.
+
+        Args:
+            user: The user requesting the cancellation (must be the renter
+                or the listing's owner).
+            reservation_id: The id of the reservation to cancel.
+
+        Returns:
+            The updated Reservation instance.
+
+        Raises:
+            NoContentError: If the reservation does not exist.
+            ReservationPermissionDeniedError: If the user is neither the
+                renter nor the listing's owner.
+            CantBeCanceledError: If the reservation has already started
+                (CHECKED_IN) or otherwise cannot transition to CANCELED, or
+                if a renter is canceling past the cancellation deadline.
+        """
+        reservation = self.repository.get_by_id_for_update(reservation_id)
         check_content_helper(reservation)
 
         is_renter = reservation.user_id == user.id
@@ -194,7 +273,7 @@ class ReservationService:
             deadline = reservation.start_date - timedelta(days=CANCEL_DEADLINE_DAYS)
             if timezone.now().date() > deadline:
                 raise CantBeCanceledError(
-                    f"Cancellation is only allowed up to {CANCEL_DEADLINE_DAYS}"
+                    f"Cancellation is only allowed up to {CANCEL_DEADLINE_DAYS} "
                     f"days before check-in."
                 )
 

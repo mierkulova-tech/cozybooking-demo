@@ -314,3 +314,49 @@ class TestCozyBookingFullFlow:
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_confirm_nonexistent_reservation_returns_404(self):
+        """Confirming a reservation id that doesn't exist should 404
+        with the standardized error envelope, not crash unhandled."""
+        self._register("l7@test.de", "LESSOR")
+        lessor_token = self._login("l7@test.de")
+        self._auth(lessor_token)
+
+        response = self.client.patch(
+            "/api/v1/reservations/99999/confirm/",
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.data["error"]["code"] == "no_content"
+
+    def test_check_in_nonexistent_reservation_returns_404(self):
+        """Checking in a reservation id that doesn't exist should 404
+        with the standardized error envelope, not crash unhandled."""
+        self._register("l8@test.de", "LESSOR")
+        lessor_token = self._login("l8@test.de")
+        self._auth(lessor_token)
+
+        response = self.client.patch(
+            "/api/v1/reservations/99999/check-in/",
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.data["error"]["code"] == "no_content"
+
+    def test_cancel_nonexistent_reservation_returns_404(self):
+        """Canceling a reservation id that doesn't exist should 404
+        with the standardized error envelope, not crash unhandled."""
+        self._register("r8@test.de", "RENTER")
+        renter_token = self._login("r8@test.de")
+        self._auth(renter_token)
+
+        response = self.client.patch(
+            "/api/v1/reservations/99999/cancel/",
+            {"status": StatusChoices.CANCELED},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.data["error"]["code"] == "no_content"

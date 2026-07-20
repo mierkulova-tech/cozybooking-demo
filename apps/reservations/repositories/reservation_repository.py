@@ -40,6 +40,26 @@ class ReservationRepository:
             .first()
         )
 
+    def get_by_id_for_update(self, reservation_id: int) -> Reservation | None:
+        """Retrieve a reservation by its ID with a row-level lock.
+
+        For use inside an atomic transaction to prevent concurrent status
+        changes on the same reservation.
+
+        Args:
+            reservation_id (int): The ID of the reservation.
+
+        Returns:
+            Reservation | None: The locked Reservation instance if found,
+                otherwise None.
+        """
+        return (
+            Reservation.objects.select_related("listing", "listing__owner", "user")
+            .select_for_update()
+            .filter(id=reservation_id)
+            .first()
+        )
+
     def get_overlapping(self, listing, start_date, end_date) -> QuerySet:
         """Retrieve active overlapping reservations for a given listing and date range.
 
