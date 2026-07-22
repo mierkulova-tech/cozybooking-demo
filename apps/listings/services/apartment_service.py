@@ -1,9 +1,11 @@
 """Business logic for browsing, creating, and managing apartment listings."""
 
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 
 from apps.common.utils.content import check_content_helper
 from apps.listings.errors.listings_errors import (
+    ListingHasReservationsError,
     ListingNotFoundError,
     NotListingOwnerError,
 )
@@ -144,10 +146,15 @@ class ApartmentService:
 
         Raises:
             NotListingOwnerError: If the user does not own the listing.
+            ListingHasReservationsError: If the listing has existing reservations
+                and cannot be deleted.
         """
         apartment = self._get_owned(user, apartment_id)
 
-        self.repository.delete(apartment)
+        try:
+            self.repository.delete(apartment)
+        except ProtectedError:
+            raise ListingHasReservationsError() from None
 
     def toggle_availability(self, user, apartment_id: int) -> "Apartment":
         """Flip a listing's `is_active` flag, enforcing ownership.
